@@ -1172,8 +1172,17 @@ tailwind.config = {
        cents) and either the number sits between words, or the line's own real
        amount is the one printed on its own right underneath it. */
     const hasStrong = scan.some(x => x.strong);
+    /* When every real amount sits on its own line (a column of names, then a
+       column of amounts), a whole number at the end of a name is part of it:
+       "Santikos Embassy 14", "Studio 54". */
+    const amountColumn = hasStrong && scan.filter(x => x.strong).every(x => x.bare);
     if (hasStrong) scan.forEach((x, i) => {
       if (!x.amt || x.strong || x.bare) return;
+      if (amountColumn && /^\d{1,4}$/.test((findAmount(x.body) || {}).raw || '')) {
+        x.amt = false; x.date = false; x.desc = true; x.nameLine = true;
+        x.text = cleanDesc(x.body) || x.text;
+        return;
+      }
       let n = i + 1;
       while (n < scan.length && !scan[n].amt && !scan[n].desc && !scan[n].date) n++;
       const amountBelow = n < scan.length && scan[n].amt && scan[n].strong && scan[n].bare;
@@ -1222,7 +1231,14 @@ tailwind.config = {
         const i = names[k];
         let prev = i - 1;
         while (prev >= 0 && !scan[prev].desc && !scan[prev].amt && !scan[prev].date) prev--;
-        if (prev >= 0 && scan[prev].desc && looksLikeCardholder(scan[i].text)) { skipLine.add(i); surplus--; }
+        const same = prev >= 0 && scan[prev].text.toLowerCase() === scan[i].text.toLowerCase();   // two visits to one shop
+        if (prev >= 0 && scan[prev].desc && !same && !/\b[a-z]-[a-z]\b/i.test(scan[i].text) && looksLikeCardholder(scan[i].text)) { skipLine.add(i); surplus--; }
+      }
+      /* Still one or two names too many: the top row was cut off by the app's
+         sticky header, so its name came through but its amount did not. */
+      if (surplus > 0 && surplus <= 2) {
+        const left = names.filter(i => !skipLine.has(i));
+        for (let k = 0; k < surplus; k++) skipLine.add(left[k]);
       }
     }
 
@@ -3862,7 +3878,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-09 · 92';
+  const BUILD = '2026-10-12 · 93';
 
   /* =============================================================
      KEEPING THE DATA
