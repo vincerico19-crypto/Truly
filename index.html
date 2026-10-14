@@ -1682,8 +1682,8 @@ tailwind.config = {
   ============================================================= */
   function render() {
     const list = transactions.filter(t => t.date.slice(0, 7) === viewMonth);
-    const spent = list.filter(t => t.amount > 0 && !t.xfer).reduce((s, t) => s + t.amount, 0);
-    const income = list.filter(t => t.amount < 0 && !t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const spent = Math.max(list.filter(isSpend).reduce((s, t) => s + t.amount, 0), 0);
+    const income = list.filter(isMoneyIn).reduce((s, t) => s + Math.abs(t.amount), 0);
     const moved = list.filter(t => t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
     const budget = budgetFor(viewMonth);
 
@@ -2018,7 +2018,7 @@ tailwind.config = {
     for (let i = 5; i >= 0; i--) months.push(shiftMonth(viewMonth, -i));
     const data = months.map(mk => ({
       key: mk,
-      spent: transactions.filter(t => t.date.slice(0, 7) === mk && t.amount > 0 && !t.xfer).reduce((s, t) => s + t.amount, 0),
+      spent: Math.max(transactions.filter(t => t.date.slice(0, 7) === mk && isSpend(t)).reduce((s, t) => s + t.amount, 0), 0),
       budget: budgetFor(mk)
     }));
     const peak = Math.max.apply(null, data.map(d => d.spent).concat([1]));
@@ -2050,11 +2050,34 @@ tailwind.config = {
     openSheet($('monthSheet'));
   }
 
+  /* A refund that lands on a credit card ("Amazon · Merchandise Return") never
+     reaches your bank account. It lowers what you owe on the card and takes
+     back part of what you spent, so it is not money in. */
+  function isCardRefund(t) {
+    if (!t || t.xfer || !(t.amount < 0)) return false;
+    const a = t.acct || 'Unassigned';
+    if (a === 'Unassigned') return false;
+    return acctIcon(a) === 'card';
+  }
+  // Spending: purchases, less refunds that came back to a card.
+  function isSpend(t) { return !t.xfer && (t.amount > 0 || isCardRefund(t)); }
+  // Money that actually came in to you.
+  function isMoneyIn(t) { return !t.xfer && t.amount < 0 && !isCardRefund(t); }
+  // A card refund nets against the kind of thing it refunds ("Amazon" → Shopping).
+  function spendCat(t) {
+    if (!isCardRefund(t)) return t.cat;
+    if (t.cat && CAT_STYLE[t.cat] && !/^(income|uncategorized|transfer)$/i.test(t.cat)) return t.cat;
+    const g = guessCategory(t.desc || '', false);
+    return g && g !== 'Uncategorized' ? g : (t.cat || 'Uncategorized');
+  }
+  // Drop categories a refund has fully cancelled out.
+  function positiveCats(list) { return list.filter(c => c.total > 0.005); }
+
   function catTotals(key) {
     const map = {}, counts = {};
-    transactions.filter(t => t.date.slice(0, 7) === key && t.amount > 0 && !t.xfer)
-      .forEach(t => { map[t.cat] = (map[t.cat] || 0) + t.amount; counts[t.cat] = (counts[t.cat] || 0) + 1; });
-    return Object.keys(map).map(k => ({ name: k, total: map[k], n: counts[k] })).sort((a, b) => b.total - a.total);
+    transactions.filter(t => t.date.slice(0, 7) === key && isSpend(t))
+      .forEach(t => { const c = spendCat(t); map[c] = (map[c] || 0) + t.amount; counts[c] = (counts[c] || 0) + 1; });
+    return positiveCats(Object.keys(map).map(k => ({ name: k, total: map[k], n: counts[k] }))).sort((a, b) => b.total - a.total);
   }
 
   function donut(segments, total) {
@@ -2085,7 +2108,7 @@ tailwind.config = {
     const prevKey = shiftMonth(key, -1);
     const prevTotal = catTotals(prevKey).reduce((s, c) => s + c.total, 0);
     const rows = transactions.filter(t => t.date.slice(0, 7) === key);
-    const moneyIn = rows.filter(t => t.amount < 0 && !t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const moneyIn = rows.filter(isMoneyIn).reduce((s, t) => s + Math.abs(t.amount), 0);
     const moved = rows.filter(t => t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
 
     $('monthSheetHead').innerHTML = `
@@ -2108,12 +2131,12 @@ tailwind.config = {
 
     // the merchants that took the most
     const byMerchant = {};
-    rows.filter(t => t.amount > 0 && !t.xfer).forEach(t => {
+    rows.filter(isSpend).forEach(t => {
       const k = merchantKey(t.desc) || t.desc;
       if (!byMerchant[k]) byMerchant[k] = { name: t.desc, total: 0, n: 0 };
       byMerchant[k].total += t.amount; byMerchant[k].n++;
     });
-    const merchants = Object.values(byMerchant).sort((a, b) => b.total - a.total).slice(0, 5);
+    const merchants = positiveCats(Object.values(byMerchant)).sort((a, b) => b.total - a.total).slice(0, 5);
 
     $('monthSheetBody').innerHTML = `
       <div class="px-5 py-5 border-b border-line grid place-items-center">
@@ -2402,8 +2425,8 @@ tailwind.config = {
 
   function renderCategories(list, spent) {
     const box = $('catList'), map = {}, counts = {};
-    list.filter(t => t.amount > 0 && !t.xfer).forEach(t => { map[t.cat] = (map[t.cat] || 0) + t.amount; counts[t.cat] = (counts[t.cat] || 0) + 1; });
-    const cats = Object.keys(map).map(k => ({ name: k, total: map[k], n: counts[k] })).sort((a, b) => b.total - a.total);
+    list.filter(isSpend).forEach(t => { const c = spendCat(t); map[c] = (map[c] || 0) + t.amount; counts[c] = (counts[c] || 0) + 1; });
+    const cats = positiveCats(Object.keys(map).map(k => ({ name: k, total: map[k], n: counts[k] }))).sort((a, b) => b.total - a.total);
     if (!cats.length) { box.innerHTML = `<p class="px-4 py-6 text-[14px] text-muted text-center">Nothing spent in ${esc(monthShort(viewMonth))}.</p>`; return; }
     const top = cats[0].total;
     box.innerHTML = cats.map(c => {
@@ -2468,7 +2491,7 @@ tailwind.config = {
           <p class="text-[16px] font-medium truncate">${esc(t.desc)}</p>
           <p class="text-[13px] text-muted truncate">${esc(t.cat)}${t.acct && t.acct !== 'Unassigned' ? ' · ' + esc(t.acct) : ''}</p>
         </div>
-        <div class="num text-[16px] font-semibold shrink-0" style="color:${col}">${money(Math.abs(t.amount))}</div>
+        <div class="num text-[16px] font-semibold shrink-0" style="color:${isCardRefund(t) ? '#35C08A' : col}">${isCardRefund(t) ? '−' : ''}${money(Math.abs(t.amount))}</div>
       </div>`;
   }
   // 99.5% shows as 99%, 0.4% as <1%: a share is never "all" or "none" unless it is
@@ -2481,8 +2504,8 @@ tailwind.config = {
   function renderFlow() {
     if (!flowDetail) return;
     const isIn = flowDetail === 'in';
-    const list = transactions.filter(t => t.date.slice(0, 7) === viewMonth && !t.xfer && (isIn ? t.amount < 0 : t.amount > 0));
-    const total = list.reduce((a, t) => a + Math.abs(t.amount), 0);
+    const list = transactions.filter(t => t.date.slice(0, 7) === viewMonth && (isIn ? isMoneyIn(t) : isSpend(t)));
+    const total = isIn ? list.reduce((a, t) => a + Math.abs(t.amount), 0) : Math.max(list.reduce((a, t) => a + t.amount, 0), 0);
     const col = isIn ? '#35C08A' : '#E9EEF3';
     const month = monthShort(viewMonth).split(' ')[0];
     $('flowSheetHead').innerHTML = `
@@ -2516,8 +2539,8 @@ tailwind.config = {
     } else {
       // Where it went, tap a category to see inside it
       const byCat = {};
-      list.forEach(t => { byCat[t.cat] = (byCat[t.cat] || 0) + t.amount; });
-      const cats = Object.keys(byCat).map(k => ({ name: k, total: byCat[k] })).sort((a, b) => b.total - a.total);
+      list.forEach(t => { const c = spendCat(t); byCat[c] = (byCat[c] || 0) + t.amount; });
+      const cats = positiveCats(Object.keys(byCat).map(k => ({ name: k, total: byCat[k] }))).sort((a, b) => b.total - a.total);
       const top = list.slice().sort((a, b) => b.amount - a.amount).slice(0, 5);
       middle = `<div class="px-5 pt-4 pb-1 flex items-baseline justify-between"><p class="text-[15px] font-bold tracking-tight">By category</p><span class="text-[12px] text-muted">tap to open</span></div>
         <div class="pb-2 border-b border-line">${cats.map(c => { const st = catStyle(c.name); return `
@@ -2565,18 +2588,18 @@ tailwind.config = {
   }
   function analyzeMonth(mk) {
     const rows = transactions.filter(t => t.date.slice(0, 7) === mk);
-    const spendRows = rows.filter(t => !t.xfer && t.amount > 0);
-    const deposits = rows.filter(t => !t.xfer && t.amount < 0).reduce((a, t) => a + Math.abs(t.amount), 0);
+    const spendRows = rows.filter(isSpend);
+    const deposits = rows.filter(isMoneyIn).reduce((a, t) => a + Math.abs(t.amount), 0);
     const setIncome = incomeFor(mk);
     const moneyIn = setIncome + (settings.countDeposits ? deposits : 0);
-    const spent = spendRows.reduce((a, t) => a + t.amount, 0);
+    const spent = Math.max(spendRows.reduce((a, t) => a + t.amount, 0), 0);
     const moved = rows.filter(t => t.xfer).reduce((a, t) => a + Math.abs(t.amount), 0);
     const prev = shiftMonth(mk, -1);
     const prevByCat = {};
-    transactions.forEach(t => { if (t.date.slice(0, 7) === prev && !t.xfer && t.amount > 0) prevByCat[t.cat] = (prevByCat[t.cat] || 0) + t.amount; });
+    transactions.forEach(t => { if (t.date.slice(0, 7) === prev && isSpend(t)) { const c = spendCat(t); prevByCat[c] = (prevByCat[c] || 0) + t.amount; } });
     const byCat = {};
-    spendRows.forEach(t => { const c = byCat[t.cat] = byCat[t.cat] || { name: t.cat, total: 0, n: 0 }; c.total += t.amount; c.n++; });
-    const cats = Object.values(byCat).sort((a, b) => b.total - a.total)
+    spendRows.forEach(t => { const k = spendCat(t); const c = byCat[k] = byCat[k] || { name: k, total: 0, n: 0 }; c.total += t.amount; c.n++; });
+    const cats = positiveCats(Object.values(byCat)).sort((a, b) => b.total - a.total)
       .map(c => Object.assign(c, { prev: prevByCat[c.name] || 0 }));
     const byMerchant = {};
     spendRows.forEach(t => { const k = merchantKey(t.desc) || t.desc; const m = byMerchant[k] = byMerchant[k] || { name: t.desc, total: 0, n: 0, cat: t.cat }; m.total += t.amount; m.n++; });
@@ -2711,11 +2734,11 @@ tailwind.config = {
     if (!catDetail) return;
     const name = catDetail, st = catStyle(name);
     const rows = transactions
-      .filter(t => t.cat === name && t.date.slice(0, 7) === viewMonth && t.amount > 0 && !t.xfer)
+      .filter(t => spendCat(t) === name && t.date.slice(0, 7) === viewMonth && isSpend(t))
       .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
 
     const total = rows.reduce((s, t) => s + t.amount, 0);
-    const monthSpend = transactions.filter(t => t.date.slice(0, 7) === viewMonth && t.amount > 0 && !t.xfer).reduce((s, t) => s + t.amount, 0);
+    const monthSpend = Math.max(transactions.filter(t => t.date.slice(0, 7) === viewMonth && isSpend(t)).reduce((s, t) => s + t.amount, 0), 0);
     const share = monthSpend > 0 ? (total / monthSpend) * 100 : 0;
     const avg = rows.length ? total / rows.length : 0;
     const biggest = rows.reduce((m, t) => t.amount > (m ? m.amount : 0) ? t : m, null);
@@ -2732,7 +2755,7 @@ tailwind.config = {
     for (let i = 5; i >= 0; i--) months.push(shiftMonth(viewMonth, -i));
     const trend = months.map(mk => ({
       key: mk,
-      total: transactions.filter(t => t.cat === name && t.date.slice(0, 7) === mk && t.amount > 0 && !t.xfer).reduce((s, t) => s + t.amount, 0)
+      total: Math.max(transactions.filter(t => spendCat(t) === name && t.date.slice(0, 7) === mk && isSpend(t)).reduce((s, t) => s + t.amount, 0), 0)
     }));
     const peak = Math.max.apply(null, trend.map(x => x.total).concat([1]));
 
@@ -2836,8 +2859,8 @@ tailwind.config = {
 
     // Where this account's money went, by category
     const byCat = {};
-    rows.filter(t => t.amount > 0 && !t.xfer).forEach(t => { byCat[t.cat] = (byCat[t.cat] || 0) + t.amount; });
-    const catRows = Object.keys(byCat).map(k => ({ name: k, total: byCat[k] })).sort((a, b) => b.total - a.total).slice(0, 6);
+    rows.filter(isSpend).forEach(t => { const c = spendCat(t); byCat[c] = (byCat[c] || 0) + t.amount; });
+    const catRows = positiveCats(Object.keys(byCat).map(k => ({ name: k, total: byCat[k] }))).sort((a, b) => b.total - a.total).slice(0, 6);
     const catPeak = catRows.length ? catRows[0].total : 1;
 
     const info = accounts[name] || {};
@@ -3622,7 +3645,7 @@ tailwind.config = {
   function paintIncomeReadout() {
     const set = incomeFor(viewMonth);
     const deposits = transactions
-      .filter(t => t.date.slice(0, 7) === viewMonth && t.amount < 0 && !t.xfer)
+      .filter(t => t.date.slice(0, 7) === viewMonth && isMoneyIn(t))
       .reduce((s, t) => s + Math.abs(t.amount), 0);
     const counted = set + (settings.countDeposits ? deposits : 0);
     const el = $('incomeReadout');
@@ -3878,7 +3901,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-12 · 93';
+  const BUILD = '2026-10-13 · 94';
 
   /* =============================================================
      KEEPING THE DATA
