@@ -553,7 +553,10 @@ tailwind.config = {
       // money, not spending. Catch them up so they leave the budget total.
       if (!t.xfer && (t.cat === 'Transfer' || looksLikeTransfer(t.desc || ''))) t.xfer = true;
     });
-    if (mergeAliasAccounts()) save();
+    const firstRun95 = !settings.payFix95;
+    const merged = mergeAliasAccounts();
+    repairDoublePayments();
+    if (merged || firstRun95) save();
   }
 
   /* "Frost" beside "Frost Bank": a short name with no balance of its own that
@@ -571,6 +574,30 @@ tailwind.config = {
     });
     return hits.length === 1 ? hits[0] : null;
   }
+  /* Builds before 95 subtracted a "Pay a card" payment twice: once from the
+     card and once more from the account it came from. Put the extra back,
+     once, for any payment whose balances have not been re-entered since. */
+  function repairDoublePayments() {
+    if (settings.payFix95) return false;
+    settings.payFix95 = true;
+    let fixed = 0;
+    transactions.forEach(t => {
+      if (!t.xfer || !t.at || !/^Payment to /.test(t.desc || '')) return;
+      const card = t.desc.slice('Payment to '.length), amt = Math.abs(t.amount);
+      [card, t.acct].forEach(name => {
+        const info = accounts[name];
+        if (!info || info.asOf !== t.date || !info.asOfTime) return;
+        const gap = info.asOfTime - t.at;
+        if (gap < 0 || gap > 3000) return;               // re-entered since: leave it alone
+        const bank = acctIcon(name) === 'bank' || acctIcon(name) === 'vault';
+        if (!bank && name !== card) return;
+        info.balance = cents((Number(info.balance) || 0) + amt);
+        fixed++;
+      });
+    });
+    return fixed;
+  }
+
   function mergeAliasAccounts() {
     let moved = 0;
     transactions.forEach(t => { const to = aliasOf(t.acct); if (to) { t.acct = to; moved++; } });
@@ -608,6 +635,7 @@ tailwind.config = {
   function shiftMonth(k, d) { const [y, m] = k.split('-').map(Number); return monthKey(new Date(y, m - 1 + d, 1)); }
   function money(n) { return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
   function dayLabel(iso) { const [y, m, d] = iso.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); }
+  function cents(n) { return Math.round((Number(n) || 0) * 100) / 100; }
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
   function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function todayISO() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
@@ -953,7 +981,9 @@ tailwind.config = {
     [/\b(h-?e-?b|heb|walmart|kroger|aldi|costco|sam'?s club|trader joe|whole foods|grocer|market|food ?basket|randalls|sprouts)\b/i, 'Groceries'],
     [/\b(rent|landlord|mortgage|lease|apartment|property mgmt)\b/i, 'Housing'],
     [/\b(shell|chevron|exxon|valero|buc-?ee|gas|fuel|circle k|7-?eleven|quik ?trip|racetrac)\b/i, 'Transportation'],
-    [/\b(uber|lyft|via metro|parking|toll|dmv|car wash|autozone|o'?reilly|oil change|mechanic|tire)\b/i, 'Transportation'],
+    [/\b(mechanic|auto repair|body shop|transmission|brake)\b/i, 'Car/Repairs'],
+    [/\b(synchrony|care ?credit)\b/i, 'Debt & Fees'],             // a card you do not track in Truly
+    [/\b(uber|lyft|via metro|parking|toll|dmv|car wash|autozone|o'?reilly|oil change|tire)\b/i, 'Transportation'],
     [/\b(cps energy|saws|electric|water bill|gas bill|utility|utilities|at&t|spectrum|xfinity|comcast|verizon|t-?mobile|internet|phone bill)\b/i, 'Utilities'],
     [/\b(netflix|spotify|hulu|disney|max|prime video|youtube|apple\.com|icloud|patreon|subscription|adobe|dropbox|chatgpt|claude)\b/i, 'Subscriptions'],
     [/\b(starbucks|coffee|cafe|dunkin|restaurant|taco|pizza|burger|grill|bbq|whataburger|chick-?fil-?a|mcdonald|chipotle|panda|sushi|bar ?& ?grill|doordash|grubhub|uber eats)\b/i, 'Dining'],
@@ -1076,8 +1106,10 @@ tailwind.config = {
     /* A card statement writes a credit as a minus. A checking app writes a
        debit as a minus and a deposit plain. Detect which one this is, and
        read the signs accordingly. */
-    const bankMode = /\b(available balance|current balance|checking|savings account|posted transactions)\b/i.test(raw)
-      && /-\s?[$\u20ac\u00a3]?\s?\d/.test(raw);
+    const hasMinus = /-\s?[$\u20ac\u00a3]?\s?\d/.test(raw);
+    const isBankName = n => !!n && n !== 'Unassigned' && (acctIcon(n) === 'bank' || acctIcon(n) === 'vault');
+    let bankMode = hasMinus && (/\b(available balance|current balance|checking|savings account|posted transactions)\b/i.test(raw)
+      || isBankName(pasteForAcct) || isBankName(guessAccount(raw)));
 
     // A card name anywhere in the paste (a statement header, say) applies to the whole batch.
     const batchAcct = guessAccount(raw);
@@ -1291,6 +1323,21 @@ tailwind.config = {
       }
     }
 
+    /* The running balance proves which way a minus goes: if a "-$41.00" row
+       made the balance drop, this is a checking account and every minus is
+       money out (a card statement uses the minus for refunds instead). */
+    if (!bankMode && hasMinus && forcedDir.size) {
+      const lines = raw.split(/\r?\n/);
+      for (const [i, dir] of forcedDir) {
+        const neg = /-\s?[$\u20ac\u00a3]?\s?\d/.test(lines[i] || '');
+        if ((neg && dir === 'out') || (!neg && dir === 'in')) { bankMode = true; break; }
+      }
+    }
+    // On a checking statement a card's name is who you paid, not whose statement this is.
+    if (bankMode && !isBankName(runAcct)) {
+      runAcct = isBankName(pasteForAcct) ? pasteForAcct : (isBankName(settings.primaryAcct) ? settings.primaryAcct : 'Unassigned');
+    }
+
     raw.split(/\r?\n/).forEach((line, lineIdx) => {
       if (skipLine.has(lineIdx)) return;
       const g = gate(line);
@@ -1496,7 +1543,8 @@ tailwind.config = {
       // "to <an account you have>" is moving your own money
       const descAcct = guessAccount(desc);
       const toOwnAccount = (/^\s*(to|from)\b/i.test(desc) && descAcct !== 'Unassigned')
-        || (bankMode && descAcct !== 'Unassigned' && value < 0);   // paying a card from checking
+        || (bankMode && descAcct !== 'Unassigned' && value < 0 && !!accounts[resolveAcct(descAcct)]
+            && acctIcon(resolveAcct(descAcct)) === 'card');   // paying a card you track, from checking (a bank loan is a bill)
       const isXfer = looksLikeTransfer(s + ' ' + desc) || cat === 'Transfer' || toOwnAccount;
       if (bankMode) {
         signed = value < 0 ? Math.abs(value) : -Math.abs(value);   // minus means it left the account
@@ -3805,22 +3853,28 @@ tailwind.config = {
     if (!card || !from) { toast('Pick a card and an account'); return; }
     if (!amt) { toast('Enter an amount'); return; }
 
+    /* Read both balances BEFORE the payment is logged. Reading them after
+       counted the new payment once inside the balance and then took it off
+       again, so the card and the bank each dropped by twice the amount. */
+    const cardBefore = balanceDetail(card).now;
+    const fromBefore = balanceDetail(from).now;
+    const now = Date.now();
     transactions.push({
-      id: uid(), at: Date.now(), date: todayISO(),
+      id: uid(), at: now, date: todayISO(),
       desc: 'Payment to ' + card,
       cat: 'Transfer', acct: from, xfer: true, amount: amt
     });
     // Move both stored balances now and re-stamp them, so the figures are
     // right immediately and today's entry is not counted twice.
     const cardInfo = accounts[card] || {};
-    cardInfo.balance = Math.max(balanceDetail(card).now - amt, 0);
-    cardInfo.asOf = todayISO(); cardInfo.asOfTime = Date.now();
+    cardInfo.balance = cents(Math.max(cardBefore - amt, 0));
+    cardInfo.asOf = todayISO(); cardInfo.asOfTime = now;
     accounts[card] = cardInfo;
 
     const fromInfo = accounts[from] || {};
     if (Number(fromInfo.balance) > 0 || fromInfo.asOf) {
-      fromInfo.balance = Math.max(balanceDetail(from).now - amt, 0);
-      fromInfo.asOf = todayISO(); fromInfo.asOfTime = Date.now();
+      fromInfo.balance = cents(Math.max(fromBefore - amt, 0));
+      fromInfo.asOf = todayISO(); fromInfo.asOfTime = now;
       accounts[from] = fromInfo;
     }
 
@@ -3848,7 +3902,7 @@ tailwind.config = {
       const changed = Math.abs(next - (Number(info.balance) || 0)) >= 0.005 || chosen !== (info.asOf || todayISO());
       if (!changed) return;
       n++;
-      info.balance = next;
+      info.balance = cents(next);
       info.asOf = chosen;
       // Dated today: count anything logged from now on. Dated earlier: count
       // everything already logged after that date.
@@ -3901,7 +3955,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-13 · 94';
+  const BUILD = '2026-10-14 · 95';
 
   /* =============================================================
      KEEPING THE DATA
@@ -3978,7 +4032,7 @@ tailwind.config = {
         </div>
         <div data-delpanel="${esc(n)}" class="hidden"></div>
         <div class="flex gap-2">
-          <input class="cell num text-[14px]" type="number" inputmode="decimal" step="0.01" placeholder="${isBank ? 'Balance' : 'Owed'}" value="${bd.start ? bd.start : ''}" data-bal="${esc(n)}" aria-label="${esc(n)} balance">
+          <input class="cell num text-[14px]" type="number" inputmode="decimal" step="0.01" placeholder="${isBank ? 'Balance' : 'Owed'}" value="${bd.start ? cents(bd.start) : ''}" data-bal="${esc(n)}" aria-label="${esc(n)} balance">
           ${isBank ? '' : `<input class="cell num text-[14px]" type="number" inputmode="decimal" step="1" placeholder="Limit" value="${lim ? lim : ''}" data-lim="${esc(n)}" aria-label="${esc(n)} credit limit">`}
         </div>
         ${isBank ? '' : `<div class="flex items-center gap-2 mt-2">
