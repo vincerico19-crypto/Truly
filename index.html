@@ -2008,8 +2008,23 @@ tailwind.config = {
       Math.abs(Math.abs(c.amount) - amt) < 0.005 && daysApart(c.date, t.date) <= 5);
   }
 
-  function balanceDetail(name) {
+  /* Entries dated before the balance's day but added after it. For a balance
+     typed from the bank they are already in it; if not, the sheet offers to
+     count them. Returns how much they would move the balance. */
+  function lateEntries(name) {
     const info = accounts[name] || {};
+    if (!info.asOf || info.auto || !info.asOfTime) return null;
+    const stamp = Number(info.asOfTime);
+    const rows = transactions.filter(t => t.at > stamp && t.date < info.asOf &&
+      ((t.acct || 'Unassigned') === name || (t.xfer && payTarget(t) === name)));
+    if (!rows.length) return null;
+    const diff = balanceDetail(name, true).now - balanceDetail(name).now;
+    return Math.abs(diff) < 0.005 ? null : { n: rows.length, diff };
+  }
+
+  function balanceDetail(name, forceAuto) {
+    const info = accounts[name] || {};
+    const auto = !!(info.auto || forceAuto);
     const start = Number(info.balance) || 0;
     const asOf = info.asOf || null;
     if (!asOf) return { start, asOf: null, charges: 0, payments: 0, now: start };
@@ -2024,7 +2039,7 @@ tailwind.config = {
          later was already baked into the figure you typed.
          A balance Truly worked out itself (info.auto) knew only what was
          logged at that moment, so anything entered later still counts. */
-      if (t.date < asOf && !(info.auto && stamp && t.at > stamp)) return;
+      if (t.date < asOf && !(auto && stamp && t.at > stamp)) return;
       const counts = (stamp && t.at) ? (t.at > stamp) : (t.date > asOf);
       if (!counts) return;
       const mine = (t.acct || 'Unassigned') === name;
@@ -2059,7 +2074,7 @@ tailwind.config = {
         const on = t.acct || 'Unassigned';
         if (on === name) return;
         if (acctIcon(on) === 'bank' || acctIcon(on) === 'vault') return;
-        if (t.date < asOf && !(info.auto && stamp && t.at > stamp)) return;
+        if (t.date < asOf && !(auto && stamp && t.at > stamp)) return;
         const c = (stamp && t.at) ? (t.at > stamp) : (t.date > asOf);
         if (!c) return;
         const already = bankSide.some(b =>
@@ -2962,6 +2977,12 @@ tailwind.config = {
             ${bd.charges ? `<div class="flex justify-between"><span class="text-muted">${bd.isBank ? 'In since' : 'Charges since'}</span><span class="num ${bd.isBank ? 'text-income' : ''}">+${money(bd.charges)}</span></div>` : ''}
             ${bd.payments ? `<div class="flex justify-between"><span class="text-muted">${bd.isBank ? 'Out since' : 'Payments &amp; credits since'}</span><span class="num" style="color:#4F93D6">-${money(bd.payments)}</span></div>` : ''}
           </div>` : ''}
+        ${(() => { const L = lateEntries(name); return L ? `
+          <div class="mt-3 rounded-xl p-3 text-[13px]" style="background:#2B2414;border:1px solid #5A4A1E">
+            <p class="leading-relaxed"><span class="font-semibold">${L.n} entr${L.n === 1 ? 'y' : 'ies'} dated before ${esc(dayLabel(bd.asOf))}</span> ${L.n === 1 ? 'was' : 'were'} added after this balance was set, so ${L.n === 1 ? 'it is' : 'they are'} not in it. Counting ${L.n === 1 ? 'it' : 'them'} makes the balance <span class="num font-semibold">${money(bd.now + L.diff)}</span>.</p>
+            <p class="text-muted mt-1">Only do this if your bank's balance on ${esc(dayLabel(bd.asOf))} did not already include ${L.n === 1 ? 'it' : 'them'}.</p>
+            <button data-countlate="${esc(name)}" class="mt-2.5 h-10 px-4 rounded-lg bg-accent text-white font-semibold active:opacity-80">Count ${L.n === 1 ? 'it' : 'them'}</button>
+          </div>` : ''; })()}
         <p class="text-[12px] text-muted mt-2.5 leading-relaxed">Everything you log moves this on its own. To resync with what the card says, use Card &amp; account balances in settings.</p>
       </div>` : '';
 
@@ -3312,6 +3333,12 @@ tailwind.config = {
     openAcctSheet(btn.getAttribute('data-acct'));
   });
   $('acctSheetBody').addEventListener('click', function (e) {
+    const late = e.target.closest('[data-countlate]');
+    if (late) {
+      const n = late.getAttribute('data-countlate');
+      if (accounts[n]) { accounts[n].auto = true; save(); render(); renderAcctSheet(); toast('Balance updated'); }
+      return;
+    }
     const pick = e.target.closest('[data-sel]');
     if (pick) {
       const id = pick.getAttribute('data-sel');
@@ -3963,7 +3990,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-15 · 96';
+  const BUILD = '2026-10-15 · 97';
 
   /* =============================================================
      KEEPING THE DATA
