@@ -553,10 +553,11 @@ tailwind.config = {
       // money, not spending. Catch them up so they leave the budget total.
       if (!t.xfer && (t.cat === 'Transfer' || looksLikeTransfer(t.desc || ''))) t.xfer = true;
     });
-    const firstRun95 = !settings.payFix95;
+    const firstRun = !settings.payFix95 || !settings.autoFix96;
     const merged = mergeAliasAccounts();
     repairDoublePayments();
-    if (merged || firstRun95) save();
+    markAutoAnchors();
+    if (merged || firstRun) save();
   }
 
   /* "Frost" beside "Frost Bank": a short name with no balance of its own that
@@ -577,6 +578,25 @@ tailwind.config = {
   /* Builds before 95 subtracted a "Pay a card" payment twice: once from the
      card and once more from the account it came from. Put the extra back,
      once, for any payment whose balances have not been re-entered since. */
+  /* Builds before 96 re-saved both balances after Pay a card. Those figures
+     were worked out by Truly, not typed from the bank, so mark them: entries
+     pasted afterwards (even dated earlier) then count toward the balance. */
+  function markAutoAnchors() {
+    if (settings.autoFix96) return;
+    settings.autoFix96 = true;
+    transactions.forEach(t => {
+      if (!t.xfer || !t.at || !/^Payment to /.test(t.desc || '')) return;
+      const card = t.desc.slice('Payment to '.length);
+      if (!t.payTo && accounts[card]) t.payTo = card;
+      [card, t.acct].forEach(name => {
+        const info = accounts[name];
+        if (!info || !info.asOfTime || info.asOf !== t.date) return;
+        const gap = info.asOfTime - t.at;
+        if (gap >= 0 && gap <= 3000) info.auto = true;
+      });
+    });
+  }
+
   function repairDoublePayments() {
     if (settings.payFix95) return false;
     settings.payFix95 = true;
@@ -1976,6 +1996,7 @@ tailwind.config = {
      one Amex card. "CAPITAL ONE MOBILE PMT" fits two cards, so it stays
      unmatched rather than guessed. */
   function payTarget(t) {
+    if (t.payTo) return t.payTo;                 // logged with Pay a card: we know the card
     const g = guessAccount(t.desc || '');
     if (!g || g === 'Unassigned' || accounts[g]) return g;
     return aliasOf(g) || g;
@@ -2000,8 +2021,10 @@ tailwind.config = {
     transactions.forEach(t => {
       /* A row moves the balance only if it is dated on or after the day you
          typed it AND was entered afterwards. Back-dated history you paste
-         later was already baked into the figure you typed. */
-      if (t.date < asOf) return;
+         later was already baked into the figure you typed.
+         A balance Truly worked out itself (info.auto) knew only what was
+         logged at that moment, so anything entered later still counts. */
+      if (t.date < asOf && !(info.auto && stamp && t.at > stamp)) return;
       const counts = (stamp && t.at) ? (t.at > stamp) : (t.date > asOf);
       if (!counts) return;
       const mine = (t.acct || 'Unassigned') === name;
@@ -2036,7 +2059,7 @@ tailwind.config = {
         const on = t.acct || 'Unassigned';
         if (on === name) return;
         if (acctIcon(on) === 'bank' || acctIcon(on) === 'vault') return;
-        if (t.date < asOf) return;
+        if (t.date < asOf && !(info.auto && stamp && t.at > stamp)) return;
         const c = (stamp && t.at) ? (t.at > stamp) : (t.date > asOf);
         if (!c) return;
         const already = bankSide.some(b =>
@@ -3853,30 +3876,14 @@ tailwind.config = {
     if (!card || !from) { toast('Pick a card and an account'); return; }
     if (!amt) { toast('Enter an amount'); return; }
 
-    /* Read both balances BEFORE the payment is logged. Reading them after
-       counted the new payment once inside the balance and then took it off
-       again, so the card and the bank each dropped by twice the amount. */
-    const cardBefore = balanceDetail(card).now;
-    const fromBefore = balanceDetail(from).now;
-    const now = Date.now();
+    /* Just log the payment. Both balances count it on their own (the card
+       through payTo, the bank because it is that account's row), so nothing
+       is re-anchored and anything you paste later still adds up. */
     transactions.push({
-      id: uid(), at: now, date: todayISO(),
-      desc: 'Payment to ' + card,
+      id: uid(), at: Date.now(), date: todayISO(),
+      desc: 'Payment to ' + card, payTo: card,
       cat: 'Transfer', acct: from, xfer: true, amount: amt
     });
-    // Move both stored balances now and re-stamp them, so the figures are
-    // right immediately and today's entry is not counted twice.
-    const cardInfo = accounts[card] || {};
-    cardInfo.balance = cents(Math.max(cardBefore - amt, 0));
-    cardInfo.asOf = todayISO(); cardInfo.asOfTime = now;
-    accounts[card] = cardInfo;
-
-    const fromInfo = accounts[from] || {};
-    if (Number(fromInfo.balance) > 0 || fromInfo.asOf) {
-      fromInfo.balance = cents(Math.max(fromBefore - amt, 0));
-      fromInfo.asOf = todayISO(); fromInfo.asOfTime = now;
-      accounts[from] = fromInfo;
-    }
 
     save(); render(); renderAcctSheet(); renderBalances();
     $('payAmount').value = '';
@@ -3904,6 +3911,7 @@ tailwind.config = {
       n++;
       info.balance = cents(next);
       info.asOf = chosen;
+      delete info.auto;
       // Dated today: count anything logged from now on. Dated earlier: count
       // everything already logged after that date.
       if (chosen === todayISO()) info.asOfTime = Date.now();
@@ -3955,7 +3963,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-14 · 95';
+  const BUILD = '2026-10-15 · 96';
 
   /* =============================================================
      KEEPING THE DATA
