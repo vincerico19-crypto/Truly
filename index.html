@@ -859,6 +859,7 @@ tailwind.config = {
   const PLACE_NOISE = /^(san|antonio|austin|dallas|houston|tx|usa|us|store|supercenter|market|inc|llc|co|com|net|online|mobile|payment|pmt|purchase|www|http|https)$/;
   function merchantTokens(desc) {
     return cleanDesc(desc).toLowerCase()
+      .replace(/['\u2018\u2019`]/g, '')              // "Eddie's" and "Eddies" are one shop
       .replace(/\.(com|net|org|co)\b/g, ' ')
       .replace(/[^a-z0-9 ]/g, ' ')
       .split(/\s+/)
@@ -1666,7 +1667,12 @@ tailwind.config = {
       // Every issuer names the same payment differently — "Payment Thank You",
       // "Mobile Payment", "Electronic Payment" — so match those on amount alone.
       if (moved && (t.xfer || looksLikeTransfer(t.desc || ''))) return true;
-      return closeEnough(merchantKey(t.desc), key);
+      if (closeEnough(merchantKey(t.desc), key)) return true;
+      /* Same shop, same amount, same card within a few days: a pending charge
+         that posted later, often under a longer name ("Eddies Taco House Bar"). */
+      const stem = merchantStem(r.desc);
+      const sameAcct = !r.acct || r.acct === 'Unassigned' || !t.acct || t.acct === 'Unassigned' || t.acct === r.acct;
+      return stem.length >= 4 && stem === merchantStem(t.desc) && sameAcct && daysApart(t.date, r.date) <= 3;
     });
   }
 
@@ -3990,7 +3996,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-15 · 97';
+  const BUILD = '2026-10-17 · 98';
 
   /* =============================================================
      KEEPING THE DATA
