@@ -965,6 +965,32 @@ tailwind.config = {
     return { color: SPARE_COLORS[h % SPARE_COLORS.length], icon: 'tag' };
   }
   const ICON_SCALE = 1.25;                // every icon in the app, one knob
+  /* Each card gets its own little card face: a sleek gradient tile with a mark
+     that is easy to tell apart at a glance. Generic marks, not issuer logos. */
+  const flakeArm = '<path d="M12 12V3.5M9.7 5.4 12 7.6l2.3-2.2"/>';
+  const CARD_ART = [
+    // Navy metal with a thin silver X, like the lettering on the card itself.
+    { re: /\bventure\s*x\b/i, bg: ['#2A3D63', '#0C162B'], fg: '#DCE2EC', metal: true,
+      svg: '<path d="M7.6 5.6 16.4 18.4M16.4 5.6 7.6 18.4" stroke-width="1.45" stroke-linecap="butt"/>' },
+    { re: /\bsavor\b/i, bg: ['#3A1C12', '#B2532E'], fg: '#FFE4D6',
+      svg: '<path d="M7 3.5v5.2a2 2 0 0 0 4 0V3.5M9 3.5v17"/><path d="M16.5 3.5c-1.6 1.4-2.4 3.5-2.4 6.2V13h2.4v7.5"/>' },
+    { re: /\b(amex|american express|blue cash)\b/i, bg: ['#0E3558', '#2F93E0'], fg: '#EAF6FF',
+      svg: '<path d="M5.5 15.5V12.5a6.5 6.5 0 0 1 13 0"/><path d="M18.5 12.5h-4.2v7"/><path d="M5.5 15.5 4 18"/><path d="M7.4 7.4C8.6 3.4 15.2 2.6 17.6 6" stroke-width="2.6"/><path d="M10 12.5h2.2"/>' },
+    { re: /\bfrost\b/i, bg: ['#0D2238', '#2B6CA8'], fg: '#DDF1FF',
+      svg: [0, 60, 120, 180, 240, 300].map(a => `<g transform="rotate(${a} 12 12)">${flakeArm}</g>`).join('') },
+  ];
+  function cardArt(name) { return CARD_ART.find(a => a.re.test(String(name || ''))) || null; }
+  // The tile beside an account everywhere it is listed.
+  function acctTile(name, box, px, radius) {
+    const art = cardArt(name);
+    if (!art) {
+      const c = acctColor(name);
+      return `<span class="shrink-0 grid place-items-center rounded-[${radius}]" style="width:${box}px;height:${box}px;background:${c}2E">${iconSvg(acctIcon(name), c, px)}</span>`;
+    }
+    const s = Math.round(px * ICON_SCALE * 1.05);
+    return `<span class="shrink-0 grid place-items-center rounded-[${radius}]" style="width:${box}px;height:${box}px;background:${art.metal ? 'linear-gradient(115deg,rgba(255,255,255,0) 38%,rgba(255,255,255,.13) 52%,rgba(255,255,255,0) 66%),radial-gradient(120% 90% at 85% 20%,rgba(120,150,210,.28),rgba(0,0,0,0) 60%),' : ''}linear-gradient(135deg,${art.bg[0]} 0%,${art.bg[1]} 100%);box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.08)"><svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${art.svg}</svg></span>`;
+  }
+
   function iconSvg(key, color, px) {
     px = Math.round(px * ICON_SCALE);
     return `<svg width="${px}" height="${px}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICONS[key] || ICONS.tag}</svg>`;
@@ -1205,7 +1231,9 @@ tailwind.config = {
       if (UI_JUNK.test(t) || UI_JUNK.test(bare)) return null;
       if (MARKETING.test(t)) return null;
       const letters = (t.match(/[a-z]/gi) || []).length;
-      if (letters < 3 && !(hasMoney || /^\s*-?\d[\d,]*\.\d{2}\s*$/.test(t))) return null;
+      // Short store names are real: "H&M", "A&W", "BP", "QT".
+      const shortName = /^\s*[A-Za-z]{1,3}\s?&\s?[A-Za-z]{1,3}\s*$/.test(t) || (/^\s*[A-Z]{2}\s*$/.test(t) && !/^\s*(OK|AM|PM|US|TX|CA|NY|FL|ID|NO|GO)\s*$/.test(t));
+      if (letters < 3 && !shortName && !(hasMoney || /^\s*-?\d[\d,]*\.\d{2}\s*$/.test(t))) return null;
       return { s: t, hasMoney: hasMoney };
     }
 
@@ -2498,11 +2526,11 @@ tailwind.config = {
       box.innerHTML = names.map(n => `
         <button class="w-full text-left px-4 py-3 active:bg-page ${n === acctFilter ? 'bg-page/60' : ''}" data-acct="${esc(n)}">
           <div class="flex items-center gap-3">
-            <span class="shrink-0 grid place-items-center rounded-[.6rem]" style="width:38px;height:38px;background:${acctColor(n)}2E">${iconSvg(acctIcon(n), acctColor(n), 17)}</span>
+            ${acctTile(n, 38, 17, '.6rem')}
             <span class="text-[16px] font-medium truncate flex-1">${esc(n)}</span>
             <span class="num text-[16px] font-semibold shrink-0">${money(map[n].out)}</span>
           </div>
-          <p class="text-[13px] text-muted mt-0.5 pl-[50px]">${map[n].n ? map[n].n + ' entr' + (map[n].n === 1 ? 'y' : 'ies') : 'No charges yet'}${map[n].in ? ' · ' + money(map[n].in) + ' in' : ''}${map[n].paid ? ' · <span class="font-semibold" style="color:#4F93D6">' + money(map[n].paid) + ' paid</span>' : ''}${owedLabel(n)}</p>
+          <p class="text-[13px] text-muted mt-0.5 pl-[50px]">${map[n].n ? map[n].n + ' entr' + (map[n].n === 1 ? 'y' : 'ies') : 'No charges yet'}${map[n].in ? ' · ' + money(map[n].in) + (acctIcon(n) === 'card' ? ' refunded' : ' in') : ''}${map[n].paid ? ' · <span class="font-semibold" style="color:#4F93D6">' + money(map[n].paid) + ' paid</span>' : ''}${owedLabel(n)}</p>
           ${dueStrip(n)}${utilStrip(n)}${bankStrip(n, map[n])}
         </button>`).join('');
     }
@@ -2943,7 +2971,7 @@ tailwind.config = {
                            : out - inn - paid;                 // change in what you owe
 
     $('acctSheetHead').innerHTML = `
-      <span class="shrink-0 grid place-items-center rounded-[.6rem]" style="width:45px;height:45px;background:${color}2E">${iconSvg(acctIcon(name), color, 20)}</span>
+      ${acctTile(name, 45, 20, '.6rem')}
       <div class="min-w-0">
         <p class="text-[16px] font-semibold truncate">${esc(name)}</p>
         <p class="num text-[13px] text-muted">${esc(monthShort(viewMonth))} · ${rows.length} entr${rows.length === 1 ? 'y' : 'ies'}</p>
@@ -3996,7 +4024,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-17 · 98';
+  const BUILD = '2026-10-18 · 100';
 
   /* =============================================================
      KEEPING THE DATA
@@ -4058,7 +4086,7 @@ tailwind.config = {
       const col = lim > 0 ? (pct >= 70 ? '#E2614A' : pct >= 30 ? '#D79A2B' : '#35C08A') : '#93A1AE';
       return `<div class="rounded-xl border border-line p-2.5">
         <div class="flex items-center gap-2 mb-2">
-          <span class="shrink-0 grid place-items-center rounded-[.5rem]" style="width:30px;height:30px;background:${acctColor(n)}2E">${iconSvg(acctIcon(n), acctColor(n), 14)}</span>
+          ${acctTile(n, 30, 14, '.5rem')}
           <span class="text-[14px] font-medium truncate flex-1">${esc(n)}</span>
           ${lim > 0 ? `<span class="num text-[12px] shrink-0" style="color:${col}">${Math.round(pct)}% used</span>` : ''}
 <button data-moveacct="${esc(n)}" data-step="-1" aria-label="Move ${esc(n)} up" class="shrink-0 w-8 h-8 -my-1 grid place-items-center rounded-full text-muted active:bg-line">
