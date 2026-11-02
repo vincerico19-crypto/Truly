@@ -1302,23 +1302,82 @@ tailwind.config = {
        more names than amounts, the extras are those labels: a person-like name
        sitting right under another name that no shop rule recognises. */
     const skipLine = new Set();
+    const wrapLine = new Set();     // second line of a wrapped shop name
+    const rowStart = new Set();     // a shop name that begins a new row
+    const knownLabels = new Set();  // cardholder names proven by repeating
+    // Once the real cardholder label is known, no shop gets mistaken for one.
+    const isHolder = t => knownLabels.size ? knownLabels.has(String(t || '').toLowerCase()) : looksLikeCardholder(t);
+    /* The cardholder's name printed under every row repeats ("NOEMY RICO").
+       Any person-like name seen twice or more is that label, wherever it sits,
+       as long as enough names are left to go with the amounts. */
+    {
+      const descIdx = scan.map((x, i) => x.desc ? i : -1).filter(i => i >= 0);
+      const cnt = {};
+      descIdx.forEach(i => { const k = scan[i].text.toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; });
+      const label = new Set(Object.keys(cnt).filter(k => cnt[k] >= 2 &&
+        looksLikeCardholder(scan[descIdx.find(i => scan[i].text.toLowerCase() === k)].text)));
+      // Family on the same account share a surname: "NOEMY RICO", "VINCENT RICO".
+      if (label.size) {
+        const words = new Set([...label].flatMap(k => k.split(/\s+/)).filter(w => w.length >= 3));
+        descIdx.forEach(i => {
+          const k = scan[i].text.toLowerCase();
+          if (!label.has(k) && looksLikeCardholder(scan[i].text) && k.split(/\s+/).some(w => words.has(w))) label.add(k);
+        });
+      }
+      const amtsAll = scan.filter(x => x.amt).length;
+      if (label.size && descIdx.filter(i => !label.has(scan[i].text.toLowerCase())).length >= amtsAll) {
+        label.forEach(k => knownLabels.add(k));
+        descIdx.forEach(i => {
+          if (!label.has(scan[i].text.toLowerCase())) return;
+          skipLine.add(i);
+          // the next shop name after a label starts a new row
+          let n = i + 1;
+          while (n < scan.length && !scan[n].desc && !scan[n].amt && !scan[n].date) n++;
+          if (n < scan.length && scan[n].desc && !label.has(scan[n].text.toLowerCase())) rowStart.add(n);
+        });
+      }
+    }
     const amtCount = scan.filter(x => x.amt).length;
     if (!interleaved && firstAmt > 0 && amtCount >= 2) {     // a real column of amounts
       const amts = amtCount;
       const names = [];
       for (let i = Math.max(headerCut + 1, 0); i < firstAmt; i++) if (scan[i].desc) names.push(i);
-      let surplus = names.length - amts;
-      for (let k = 1; k < names.length && surplus > 0; k++) {
-        const i = names[k];
-        let prev = i - 1;
-        while (prev >= 0 && !scan[prev].desc && !scan[prev].amt && !scan[prev].date) prev--;
-        const same = prev >= 0 && scan[prev].text.toLowerCase() === scan[i].text.toLowerCase();   // two visits to one shop
-        if (prev >= 0 && scan[prev].desc && !same && !/\b[a-z]-[a-z]\b/i.test(scan[i].text) && looksLikeCardholder(scan[i].text)) { skipLine.add(i); surplus--; }
+      let surplus = names.length - amts - names.filter(i => skipLine.has(i)).length;
+      /* A person's name printed under every row ("NOEMY RICO") repeats down
+         the column. Once a repeated person-like name is found, every copy of
+         it is the cardholder label, and nothing else is guessed to be one. */
+      const key = i => scan[i].text.toLowerCase();
+      const counts = {};
+      names.forEach(i => { counts[key(i)] = (counts[key(i)] || 0) + 1; });
+      const holders = new Set(Object.keys(counts).filter(k => counts[k] >= 2 &&
+        looksLikeCardholder(scan[names.find(i => key(i) === k)].text)));
+      if (holders.size && names.filter(i => !holders.has(key(i))).length >= amts) {
+        names.forEach(i => { if (holders.has(key(i)) && !skipLine.has(i)) { skipLine.add(i); surplus--; } });
+      } else {
+        holders.clear();
+        for (let k = 1; k < names.length && surplus > 0; k++) {
+          const i = names[k];
+          let prev = i - 1;
+          while (prev >= 0 && !scan[prev].desc && !scan[prev].amt && !scan[prev].date) prev--;
+          const same = prev >= 0 && scan[prev].text.toLowerCase() === scan[i].text.toLowerCase();   // two visits to one shop
+          if (prev >= 0 && scan[prev].desc && !same && !/\b[a-z]-[a-z]\b/i.test(scan[i].text) && looksLikeCardholder(scan[i].text)) { skipLine.add(i); surplus--; }
+        }
+      }
+      /* With a cardholder label under every row, a name sitting straight under
+         another name (no label between) is that shop's name wrapping onto a
+         second line: "ACADEMY SPORTS" / "OUTDOORS". */
+      if (surplus > 0 && (holders.size || rowStart.size)) {
+        const kept = names.filter(i => !skipLine.has(i));
+        for (let k = 1; k < kept.length && surplus > 0; k++) {
+          let prev = kept[k] - 1;
+          while (prev >= 0 && !scan[prev].desc && !scan[prev].amt && !scan[prev].date) prev--;
+          if (prev === kept[k - 1]) { wrapLine.add(kept[k]); surplus--; }
+        }
       }
       /* Still one or two names too many: the top row was cut off by the app's
          sticky header, so its name came through but its amount did not. */
       if (surplus > 0 && surplus <= 2) {
-        const left = names.filter(i => !skipLine.has(i));
+        const left = names.filter(i => !skipLine.has(i) && !wrapLine.has(i));
         for (let k = 0; k < surplus; k++) skipLine.add(left[k]);
       }
     }
@@ -1483,11 +1542,16 @@ tailwind.config = {
         // Two description lines in a row are one merchant: a wrapped name, or
         // the cardholder printed underneath it. Join them rather than queueing
         // a second transaction that does not exist.
-        if (lastWasDesc && pending.length) {
+        if (lastWasDesc && pending.length && wrapLine.has(lineIdx)) {
+          const last = pending[pending.length - 1];
+          last.desc = (last.desc + ' ' + leftover).trim();
+          return;
+        }
+        if (lastWasDesc && pending.length && !rowStart.has(lineIdx)) {
           const last = pending[pending.length - 1];
           // A cardholder name read just after the previous row's amount belongs
           // to that row, not to the merchant coming next. Start fresh.
-          if (interleaved && last.afterRow && looksLikeCardholder(last.desc) && !looksLikeCardholder(leftover)) {
+          if (interleaved && last.afterRow && isHolder(last.desc) && !isHolder(leftover)) {
             last.desc = leftover; last.afterRow = false;
             return;
           }
@@ -1500,7 +1564,7 @@ tailwind.config = {
           // too short to have wrapped, so what follows is the next merchant.
           // Under a merchant too short to have wrapped, a bare person's name is
           // the cardholder label, not part of the shop and not a second shop.
-          if (interleaved && last.desc.length < 14 && looksLikeCardholder(leftover)) return;
+          if (interleaved && last.desc.length < 14 && isHolder(leftover)) return;
           if (!interleaved && last.desc.length < 14) split = true;
           // A plain two-word name tacked onto an already-full merchant line is
           // the cardholder the app prints underneath, not part of the shop.
@@ -1569,7 +1633,7 @@ tailwind.config = {
       } else if (pending.length) {
         const p = pending.shift();
         // The previous row's cardholder label, not the start of this name
-        if (interleaved && p.afterRow && looksLikeCardholder(p.desc) && !looksLikeCardholder(desc)) {
+        if (interleaved && p.afterRow && isHolder(p.desc) && !isHolder(desc)) {
           // drop it; this line carries its own merchant and amount
         } else
         // "Electronic Payment" and "Ezschool" are two rows, not one name
@@ -4024,7 +4088,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-10-18 · 100';
+  const BUILD = '2026-11-01 · 101';
 
   /* =============================================================
      KEEPING THE DATA
