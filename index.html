@@ -931,7 +931,7 @@ tailwind.config = {
     'Shopping':       ['#D667AF', 'bag', '🛍️'],
     'Health':         ['#E2614A', 'cross', '💊'],    // the red cross
     'Entertainment':  ['#838BE4', 'ticket', '🎟️'],   // house lights down
-    'Insurance':      ['#7F98A6', 'shield', '🛡️'],   // steel, protective
+    'Insurance':      ['#7F98A6', 'shield', '☂️'],   // steel, protective
     'Giving':         ['#CB6590', 'heart', '🙏'],
     'Fitness':        ['#45B39D', 'weight', '💪'],
     'Family':         ['#DE9E4E', 'users', '👨‍👩‍👧'],
@@ -1040,6 +1040,14 @@ tailwind.config = {
   /* Some shops say exactly what they are, so their row gets a closer emoji
      than their category: a dentist is a tooth, not a pill. */
   const DESC_EMOJI = [
+    [/\b(allstate|farmers ins\w*|geico|progressive|state ?farm|liberty mutual|usaa ins\w*|nationwide|insurance)\b/i, '☂️'],
+    [/\b(t-?\s?mobile|verizon|at&t|at ?and ?t|cricket|metro ?by|mint mobile|boost mobile|visible|straight ?talk|wireless)\b/i, '📱'],
+    [/\b(netflix|hulu|disney\+?|hbo|max\.com|wb studio\w*|paramount|peacock|youtube tv)\b/i, '🎬'],
+    [/\b(simplisafe|adt|ring\.com|vivint)\b/i, '🔒'],
+    [/\b(oil change|take 5|jiffy lube|valvoline)\b/i, '🛢️'],
+    [/\b(interest charge|finance charge|late fee)\b/i, '📈'],
+    [/\b(vending)\b/i, '🥤'],
+    [/\b(dunkin|donuts?)\b/i, '🍩'],
     [/\b(dental|dentist|orthodont\w*|braces|smile direct)\b/i, '🦷'],
     [/\b(optometr\w*|vision|eye ?care|eyeglass\w*|lenscrafters)\b/i, '👓'],
     [/\b(doctor|clinic|hospital|urgent care|medical|pediatric\w*)\b/i, '🩺'],
@@ -4189,7 +4197,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-07 · 104';
+  const BUILD = '2026-11-07 · 105';
 
   /* =============================================================
      KEEPING THE DATA
