@@ -1040,7 +1040,7 @@ tailwind.config = {
   function catChip(name, box) {
     const st = catStyle(name);
     const b = Math.round(box * ICON_SCALE);
-    return `<span class="shrink-0 grid place-items-center rounded-[.7rem]" style="width:${b}px;height:${b}px;background:${st.color}2E">${emojiGlyph(name, b * 0.52)}</span>`;
+    return `<span class="shrink-0 grid place-items-center" style="width:${b}px;height:${b}px">${emojiGlyph(name, b * 0.62)}</span>`;
   }
 
   const CAT_RULES = [
@@ -2799,7 +2799,7 @@ tailwind.config = {
         <div class="pb-2 border-b border-line">${cats.map(c => { const st = catStyle(c.name); return `
           <button data-flowcat="${esc(c.name)}" class="w-full text-left px-5 py-2.5 active:bg-page">
             <div class="flex items-center gap-3">
-              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${st.color}22">${emojiGlyph(c.name, 21)}</span>
+              <span class="w-10 h-10 grid place-items-center shrink-0">${emojiGlyph(c.name, 25)}</span>
               <span class="flex-1 min-w-0 text-[15px] font-medium truncate">${esc(c.name)}</span>
               <span class="num text-[15px] font-semibold">${money(c.total)}</span>
             </div>
@@ -2937,7 +2937,7 @@ tailwind.config = {
         const st = catStyle(c.name), d = c.total - c.prev;
         const chg = c.prev ? `<span class="num text-[12px] ${d > 0 ? 'text-over' : 'text-income'}">${d > 0 ? '\u2191' : '\u2193'} ${money(Math.abs(d))}</span>` : `<span class="text-[12px] text-muted">new</span>`;
         return `<div class="px-5 py-2.5 flex items-center gap-3">
-          <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${st.color}22">${emojiGlyph(c.name, 21)}</span>
+          <span class="w-10 h-10 grid place-items-center shrink-0">${emojiGlyph(c.name, 25)}</span>
           <div class="flex-1 min-w-0"><p class="text-[15px] font-medium truncate">${esc(c.name)}</p><p class="text-[12px] text-muted">${c.n} purchase${c.n === 1 ? '' : 's'} · ${sharePct(c.total, r.spent)}</p></div>
           <div class="text-right"><p class="num text-[15px] font-semibold">${money(c.total)}</p>${chg}</div></div>`; }).join('')}</div>`;
     const freq = r.frequent.length ? sec('Small, frequent buys', `<div class="pb-2 border-b border-line">${r.frequent.map(m => `
@@ -4157,7 +4157,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-07 · 102';
+  const BUILD = '2026-11-07 · 103';
 
   /* =============================================================
      KEEPING THE DATA
