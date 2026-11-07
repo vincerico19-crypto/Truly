@@ -1037,6 +1037,38 @@ tailwind.config = {
     </span>`;
   }
 
+  /* Some shops say exactly what they are, so their row gets a closer emoji
+     than their category: a dentist is a tooth, not a pill. */
+  const DESC_EMOJI = [
+    [/\b(dental|dentist|orthodont\w*|braces|smile direct)\b/i, '🦷'],
+    [/\b(optometr\w*|vision|eye ?care|eyeglass\w*|lenscrafters)\b/i, '👓'],
+    [/\b(doctor|clinic|hospital|urgent care|medical|pediatric\w*)\b/i, '🩺'],
+    [/\b(pharmacy|cvs|walgreens)\b/i, '💊'],
+    [/\b(shell|chevron|exxon|valero|buc-?ee'?s|circle k|7-?eleven|quik ?trip|racetrac|fuel)\b/i, '⛽'],
+    [/\b(car ?wash|touchless)\b/i, '🧽'],
+    [/\b(starbucks|dunkin|coffee|cafe)\b/i, '☕'],
+    [/\b(hair ?cut|barber)\b/i, '💈'],
+  ];
+  function descEmoji(desc) { const h = DESC_EMOJI.find(([re]) => re.test(desc || '')); return h ? h[1] : null; }
+  // Money moved between your own accounts or paid to a card.
+  function xferEmoji(t) {
+    const d = (t && t.desc) || '';
+    if (/\b(zelle|venmo|cash ?app|paypal)\b/i.test(d) || /^\s*to\s+(?!savings|checking|account|parents|ssfcu)/i.test(d)) return '💸';
+    if (t.payTo || /\b(payment to|pmt|payment|autopay|thank you|capital one|amex|american express|discover|chase card|citi|synchrony)\b/i.test(d) || (() => { const p = payTarget(t); return p && accounts[p] && acctIcon(p) === 'card'; })()) return '💳';
+    return '🔄';
+  }
+  function emojiChip(emoji, box) {
+    const b = Math.round(box * ICON_SCALE);
+    return `<span class="shrink-0 grid place-items-center" style="width:${b}px;height:${b}px"><span aria-hidden="true" style="font-size:${Math.round(b * 0.62)}px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">${emoji}</span></span>`;
+  }
+  // The icon beside one transaction.
+  function txChip(t, box) {
+    if (t.xfer) return emojiChip(xferEmoji(t), box);
+    if (t.amount < 0) return catChip('Income', box);
+    const e = descEmoji(t.desc);
+    return e ? emojiChip(e, box) : catChip(t.cat, box);
+  }
+
   function catChip(name, box) {
     const st = catStyle(name);
     const b = Math.round(box * ICON_SCALE);
@@ -2496,7 +2528,7 @@ tailwind.config = {
     $('recurringList').innerHTML = list.map(r => {
       const st = catStyle(r.cat);
       return `<button class="w-full text-left px-4 py-3 active:bg-page flex items-center gap-3" data-cat="${esc(r.cat)}">
-        ${catChip(r.cat, 34)}
+        ${descEmoji(r.name) ? emojiChip(descEmoji(r.name), 34) : catChip(r.cat, 34)}
         <div class="min-w-0 flex-1">
           <p class="text-[16px] font-medium truncate">${esc(r.name)}</p>
           <p class="num text-[13px] truncate ${r.landed ? 'text-muted' : ''}" ${r.landed ? '' : 'style="color:#D79A2B"'}>${r.landed ? 'charged this month · seen ' + r.count + ' months' : 'not charged yet this month'}</p>
@@ -3194,7 +3226,7 @@ tailwind.config = {
         ? `<span class="shrink-0 grid place-items-center rounded-full border-2 ${on ? 'bg-accent border-accent' : 'border-line bg-card'}" style="width:26px;height:26px">
              ${on ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>' : ''}
            </span>`
-        : (t.xfer ? `<span class="shrink-0 grid place-items-center rounded-[.6rem]" style="width:38px;height:38px;background:#4F93D62E">${iconSvg('payment', '#4F93D6', 17)}</span>` : t.amount < 0 ? catChip('Income', 30) : catChip(t.cat, 30));
+        : txChip(t, 30);
       return `
       <div class="flex items-center gap-3 px-5 py-3 border-b border-line active:bg-page ${on ? 'bg-page/60' : ''}" data-${selectMode ? 'sel' : 'edit'}="${t.id}">
         ${mark}
@@ -3223,7 +3255,7 @@ tailwind.config = {
     editId = id;
     editDir = t.xfer ? 'xfer' : (t.amount < 0 ? 'in' : 'out');
     $('editHead').innerHTML = (editDir === 'xfer'
-      ? `<span class="shrink-0 grid place-items-center rounded-[.6rem]" style="width:38px;height:38px;background:#4F93D62E">${iconSvg('payment', '#4F93D6', 17)}</span>`
+      ? emojiChip(xferEmoji(t), 30)
       : catChip(editDir === 'in' ? 'Income' : t.cat, 30)) +
       `<h3 class="text-[16px] font-semibold truncate">Edit transaction</h3>`;
     $('editDate').value = t.date;
@@ -3364,7 +3396,7 @@ tailwind.config = {
       }
       return head + `
       <div class="flex items-center gap-3 px-4 py-3 active:bg-page" data-edit="${t.id}">
-        ${t.xfer ? `<span class="shrink-0 grid place-items-center rounded-[.6rem]" style="width:42px;height:42px;background:#4F93D62E">${iconSvg('payment', '#4F93D6', 19)}</span>` : t.amount < 0 ? catChip('Income', 34) : catChip(t.cat, 34)}
+        ${txChip(t, 34)}
         <div class="min-w-0 flex-1">
           <p class="text-[16px] font-medium truncate">${esc(t.desc)}</p>
           <p class="num text-[13px] text-muted truncate">${t.xfer ? 'Payment' : esc(t.cat)}${t.acct && t.acct !== 'Unassigned' ? ' · ' + esc(t.acct) : ''}</p>
@@ -4157,7 +4189,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-07 · 103';
+  const BUILD = '2026-11-07 · 104';
 
   /* =============================================================
      KEEPING THE DATA
