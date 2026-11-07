@@ -922,47 +922,66 @@ tailwind.config = {
   };
 
   const CAT_STYLE = {
-    'Groceries':      ['#63AC52', 'cart'],     // things that grow
-    'Dining':         ['#C47334', 'fork'],     // browned, cooked
-    'Housing':        ['#6285BC', 'home'],     // roof slate
-    'Transportation': ['#48A4B3', 'car'],      // road sign teal
-    'Utilities':      ['#E0B13A', 'bolt'],     // live current
-    'Subscriptions':  ['#9F80CE', 'repeat'],   // recurring
-    'Shopping':       ['#D667AF', 'bag'],
-    'Health':         ['#E2614A', 'cross'],    // the red cross
-    'Entertainment':  ['#838BE4', 'ticket'],   // house lights down
-    'Insurance':      ['#7F98A6', 'shield'],   // steel, protective
-    'Giving':         ['#CB6590', 'heart'],
-    'Fitness':        ['#45B39D', 'weight'],
-    'Family':         ['#DE9E4E', 'users'],
-    'Debt & Fees':    ['#AE7E58', 'card'],     // the color of owing
-    'Savings':        ['#2FA383', 'vault'],
-    'Rent':           ['#6285BC', 'home'],
-    'Transfer':       ['#4F93D6', 'payment'],
-    'Travel':         ['#31A3B3', 'plane'],
-    'Education':      ['#8D80E4', 'book'],
-    'Pets':           ['#B79139', 'paw'],
-    'Gifts':          ['#CB6590', 'gift'],
-    'Auto':           ['#8FA9C4', 'carfix'],
-    'Car/Repairs':    ['#8FA9C4', 'carfix'],   // car + wrench, steel blue
-    'Car Repairs':    ['#8FA9C4', 'carfix'],
-    'Car Repair':     ['#8FA9C4', 'carfix'],
-    'Auto Repair':    ['#8FA9C4', 'carfix'],
-    'Phone':          ['#4F93D6', 'phone'],
-    'Personal Care':  ['#B266A8', 'scissors'],
-    'P2P Transfers':  ['#4F93D6', 'swap'],      // Zelle, Venmo, Cash App
-    'Income':         ['#35C08A', 'inflow'],   // money in is green
-    'Uncategorized':  ['#93A1AE', 'tag']
+    'Groceries':      ['#63AC52', 'cart', '🛒'],     // things that grow
+    'Dining':         ['#C47334', 'fork', '🍽️'],     // browned, cooked
+    'Housing':        ['#6285BC', 'home', '🏠'],     // roof slate
+    'Transportation': ['#48A4B3', 'car', '🚗'],      // road sign teal
+    'Utilities':      ['#E0B13A', 'bolt', '⚡'],     // live current
+    'Subscriptions':  ['#9F80CE', 'repeat', '🔁'],   // recurring
+    'Shopping':       ['#D667AF', 'bag', '🛍️'],
+    'Health':         ['#E2614A', 'cross', '💊'],    // the red cross
+    'Entertainment':  ['#838BE4', 'ticket', '🎟️'],   // house lights down
+    'Insurance':      ['#7F98A6', 'shield', '🛡️'],   // steel, protective
+    'Giving':         ['#CB6590', 'heart', '🙏'],
+    'Fitness':        ['#45B39D', 'weight', '💪'],
+    'Family':         ['#DE9E4E', 'users', '👨‍👩‍👧'],
+    'Debt & Fees':    ['#AE7E58', 'card', '💳'],     // the color of owing
+    'Savings':        ['#2FA383', 'vault', '🏦'],
+    'Rent':           ['#6285BC', 'home', '🏠'],
+    'Transfer':       ['#4F93D6', 'payment', '🔄'],
+    'Travel':         ['#31A3B3', 'plane', '✈️'],
+    'Education':      ['#8D80E4', 'book', '📚'],
+    'Pets':           ['#B79139', 'paw', '🐾'],
+    'Gifts':          ['#CB6590', 'gift', '🎁'],
+    'Auto':           ['#8FA9C4', 'carfix', '🔧'],
+    'Car/Repairs':    ['#8FA9C4', 'carfix', '🔧'],   // car + wrench, steel blue
+    'Car Repairs':    ['#8FA9C4', 'carfix', '🔧'],
+    'Car Repair':     ['#8FA9C4', 'carfix', '🔧'],
+    'Auto Repair':    ['#8FA9C4', 'carfix', '🔧'],
+    'Phone':          ['#4F93D6', 'phone', '📱'],
+    'Personal Care':  ['#B266A8', 'scissors', '💈'],
+    'P2P Transfers':  ['#4F93D6', 'swap', '💸'],      // Zelle, Venmo, Cash App
+    'Income':         ['#35C08A', 'inflow', '💵'],   // money in is green
+    'Uncategorized':  ['#93A1AE', 'tag', '🏷️']
   };
   // Colors for categories you invent yourself — deliberately distinct from the named ones above.
   const SPARE_COLORS = ['#8D80E4', '#31A3B3', '#C06050', '#B79139', '#C25F9F', '#5E9270', '#8B93A2', '#A47450', '#4E96C4', '#95B34B'];
 
+  /* Categories you name yourself still get a fitting emoji when the name says
+     what it is; anything else gets a tag. */
+  const EMOJI_HINTS = [
+    [/\b(car|auto|repairs?|mechanic|tires?|oil change)\b/i, '🔧'], [/\bloan\b/i, '🧾'], [/\b(credit card|card payment)\b/i, '💳'],
+    [/\b(return|refund)\b/i, '↩️'], [/\b(gas|fuel)\b/i, '⛽'], [/\b(coffee|cafe)\b/i, '☕'], [/\b(kids?|baby|school)\b/i, '🧸'],
+    [/\b(church|tithe|offering)\b/i, '⛪'], [/\b(doctor|medical|dental|pharmacy)\b/i, '🩺'], [/\b(clothes|clothing|merchandise)\b/i, '👕'],
+    [/\b(hair|barber|beauty|nails?)\b/i, '💈'], [/\b(games?|gaming)\b/i, '🎮'], [/\b(music|guitar)\b/i, '🎸'], [/\b(photo|photography)\b/i, '📷'],
+    [/\b(home|house|furniture|repair)\b/i, '🛠️'], [/\b(food|snacks?|fast food)\b/i, '🍔'], [/\b(bills?)\b/i, '🧾'], [/\b(business|work)\b/i, '💼']
+  ];
+  function catEmoji(name) {
+    if (CAT_STYLE[name] && CAT_STYLE[name][2]) return CAT_STYLE[name][2];
+    const h = EMOJI_HINTS.find(([re]) => re.test(name || ''));
+    return h ? h[1] : '🏷️';
+  }
+  // An emoji drawn in the phone's own emoji style, sized like the old icons.
+  function emojiGlyph(name, px) {
+    return `<span aria-hidden="true" style="font-size:${Math.round(px)}px;line-height:1;font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif">${catEmoji(name)}</span>`;
+  }
+
   function catStyle(name) {
-    if (CAT_STYLE[name]) return { color: CAT_STYLE[name][0], icon: CAT_STYLE[name][1] };
-    if (/\b(car|auto|repairs?|mechanic|tires?|oil change)\b/i.test(name || '')) return { color: '#8FA9C4', icon: 'carfix' };
+    if (CAT_STYLE[name]) return { color: CAT_STYLE[name][0], icon: CAT_STYLE[name][1], emoji: catEmoji(name) };
+    if (/\b(car|auto|repairs?|mechanic|tires?|oil change)\b/i.test(name || '')) return { color: '#8FA9C4', icon: 'carfix', emoji: catEmoji(name) };
     let h = 0;
     String(name || '').split('').forEach(ch => { h = (h * 31 + ch.charCodeAt(0)) >>> 0; });
-    return { color: SPARE_COLORS[h % SPARE_COLORS.length], icon: 'tag' };
+    return { color: SPARE_COLORS[h % SPARE_COLORS.length], icon: 'tag', emoji: catEmoji(name) };
   }
   const ICON_SCALE = 1.25;                // every icon in the app, one knob
   /* Each card gets its own little card face: a sleek gradient tile with a mark
@@ -1014,14 +1033,14 @@ tailwind.config = {
         <circle cx="${box / 2}" cy="${box / 2}" r="${r}" fill="none" stroke="${ringCol}" stroke-width="3.4" stroke-linecap="round"
           stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" transform="rotate(-90 ${box / 2} ${box / 2})"></circle>
       </svg>
-      ${iconSvg(st.icon, st.color, inner)}
+      ${emojiGlyph(name, inner * 1.15)}
     </span>`;
   }
 
   function catChip(name, box) {
     const st = catStyle(name);
     const b = Math.round(box * ICON_SCALE);
-    return `<span class="shrink-0 grid place-items-center rounded-[.7rem]" style="width:${b}px;height:${b}px;background:${st.color}2E">${iconSvg(st.icon, st.color, Math.round(box * 0.62))}</span>`;
+    return `<span class="shrink-0 grid place-items-center rounded-[.7rem]" style="width:${b}px;height:${b}px;background:${st.color}2E">${emojiGlyph(name, b * 0.52)}</span>`;
   }
 
   const CAT_RULES = [
@@ -1085,6 +1104,23 @@ tailwind.config = {
 
   /* "NOEMY RICO": two or three plain words, no digits or symbols, and nothing
      any shop rule, learned merchant or payment pattern recognises. */
+  /* People on the account, learned from earlier pastes: a name that repeated
+     under every row, or the "• Noemy R...2791" tag Capital One prints. */
+  function knownHolder(t) {
+    const k = String(t || '').trim().toLowerCase();
+    if (!k) return false;
+    if ((settings.holders || []).includes(k)) return true;
+    const first = k.split(/\s+/)[0];
+    return k.split(/\s+/).length <= 3 && (settings.holderFirst || []).includes(first) && looksLikeCardholder(t);
+  }
+  function learnHolders(names, firsts) {
+    let changed = false;
+    const H = settings.holders = settings.holders || [], F = settings.holderFirst = settings.holderFirst || [];
+    (names || []).forEach(n => { n = String(n).toLowerCase().trim(); if (n && !H.includes(n)) { H.push(n); changed = true; } });
+    (firsts || []).forEach(n => { n = String(n).toLowerCase().trim(); if (n.length > 1 && !F.includes(n)) { F.push(n); changed = true; } });
+    if (changed) { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) {} }
+  }
+
   function looksLikeCardholder(t) {
     const s = String(t || '').trim();
     if (!/^[A-Za-z][A-Za-z'-]{1,14}(\s+[A-Za-z][A-Za-z'-]{0,14}){1,2}$/.test(s)) return false;
@@ -1277,7 +1313,13 @@ tailwind.config = {
        the cardholder. Some screens list every merchant first and every amount
        after; there, consecutive text lines are separate merchants. */
     const firstAmt = scan.findIndex(x => x.amt);
-    const interleaved = firstAmt >= 0 && scan.slice(firstAmt + 1).some(x => x.desc);
+    /* Names mixed in among the amounts. A new date heading starts a fresh
+       block, so "names, then their amounts" under each date is still a
+       column, not a mix. */
+    const blockEnd = (() => { if (firstAmt < 0) return -1; let i = firstAmt + 1; while (i < scan.length && !scan[i].date) i++; return i; })();
+    const columnBlocks = firstAmt > 0 && blockEnd < scan.length && !scan.slice(firstAmt + 1, blockEnd).some(x => x.desc)
+      && scan.slice(0, firstAmt).filter(x => x.desc).length >= 2;
+    const interleaved = firstAmt >= 0 && !columnBlocks && scan.slice(firstAmt + 1).some(x => x.desc);
 
     let headerCut = -1;
     for (let i = 0; i < scan.length; i++) {
@@ -1305,8 +1347,9 @@ tailwind.config = {
     const wrapLine = new Set();     // second line of a wrapped shop name
     const rowStart = new Set();     // a shop name that begins a new row
     const knownLabels = new Set();  // cardholder names proven by repeating
+    learnHolders([], [...raw.matchAll(/[\u2022\u00b7]\s*([A-Z][a-z]{1,14})\s+[A-Z]\.{2,}\s?\d{3,4}/g)].map(m => m[1]));
     // Once the real cardholder label is known, no shop gets mistaken for one.
-    const isHolder = t => knownLabels.size ? knownLabels.has(String(t || '').toLowerCase()) : looksLikeCardholder(t);
+    const isHolder = t => knownLabels.size ? (knownLabels.has(String(t || '').toLowerCase()) || knownHolder(t)) : (knownHolder(t) || looksLikeCardholder(t));
     /* The cardholder's name printed under every row repeats ("NOEMY RICO").
        Any person-like name seen twice or more is that label, wherever it sits,
        as long as enough names are left to go with the amounts. */
@@ -1314,8 +1357,10 @@ tailwind.config = {
       const descIdx = scan.map((x, i) => x.desc ? i : -1).filter(i => i >= 0);
       const cnt = {};
       descIdx.forEach(i => { const k = scan[i].text.toLowerCase(); cnt[k] = (cnt[k] || 0) + 1; });
-      const label = new Set(Object.keys(cnt).filter(k => cnt[k] >= 2 &&
-        looksLikeCardholder(scan[descIdx.find(i => scan[i].text.toLowerCase() === k)].text)));
+      const label = new Set(Object.keys(cnt).filter(k => {
+        const t = scan[descIdx.find(i => scan[i].text.toLowerCase() === k)].text;
+        return (cnt[k] >= 2 && looksLikeCardholder(t)) || knownHolder(t);
+      }));
       // Family on the same account share a surname: "NOEMY RICO", "VINCENT RICO".
       if (label.size) {
         const words = new Set([...label].flatMap(k => k.split(/\s+/)).filter(w => w.length >= 3));
@@ -1327,6 +1372,7 @@ tailwind.config = {
       const amtsAll = scan.filter(x => x.amt).length;
       if (label.size && descIdx.filter(i => !label.has(scan[i].text.toLowerCase())).length >= amtsAll) {
         label.forEach(k => knownLabels.add(k));
+        learnHolders([...label]);
         descIdx.forEach(i => {
           if (!label.has(scan[i].text.toLowerCase())) return;
           skipLine.add(i);
@@ -1339,7 +1385,9 @@ tailwind.config = {
     }
     const amtCount = scan.filter(x => x.amt).length;
     if (!interleaved && firstAmt > 0 && amtCount >= 2) {     // a real column of amounts
-      const amts = amtCount;
+      // Count only this block's amounts: the column ends at the next date heading.
+      let amts = 0;
+      for (let i = firstAmt; i < scan.length && !scan[i].date; i++) if (scan[i].amt) amts++;
       const names = [];
       for (let i = Math.max(headerCut + 1, 0); i < firstAmt; i++) if (scan[i].desc) names.push(i);
       let surplus = names.length - amts - names.filter(i => skipLine.has(i)).length;
@@ -1355,13 +1403,27 @@ tailwind.config = {
         names.forEach(i => { if (holders.has(key(i)) && !skipLine.has(i)) { skipLine.add(i); surplus--; } });
       } else {
         holders.clear();
+        const adjacent = (a, b) => { let p = b - 1; while (p > a && !scan[p].desc && !scan[p].amt && !scan[p].date) p--; return p === a; };
+        // A name that runs onto a second line: "PHOTOGRAPHY" / "BY GODSEY".
         for (let k = 1; k < names.length && surplus > 0; k++) {
-          const i = names[k];
+          const i = names[k], p = names[k - 1];
+          if (skipLine.has(i) || skipLine.has(p) || !adjacent(p, i)) continue;
+          if (/^(by|of|and|the|at|&|on|in)\b/i.test(scan[i].text) || /(&|\bof|\band|\bthe|\bat|-)\s*$/i.test(scan[p].text)) { wrapLine.add(i); surplus--; }
+        }
+        /* The cardholder's name is the last line of its row, so it sits just
+           before a date, the amounts, or the next row. Pick those first,
+           and anyone already known to be on the account before anyone else. */
+        const nextIsBoundary = i => { let n = i + 1; while (n < scan.length && !scan[n].desc && !scan[n].amt && !scan[n].date) n++; return n >= firstAmt || scan[n].date || scan[n].amt; };
+        const cands = names.slice(1).filter(i => {
+          if (skipLine.has(i) || wrapLine.has(i)) return false;
+          const t = scan[i].text;
           let prev = i - 1;
           while (prev >= 0 && !scan[prev].desc && !scan[prev].amt && !scan[prev].date) prev--;
-          const same = prev >= 0 && scan[prev].text.toLowerCase() === scan[i].text.toLowerCase();   // two visits to one shop
-          if (prev >= 0 && scan[prev].desc && !same && !/\b[a-z]-[a-z]\b/i.test(scan[i].text) && looksLikeCardholder(scan[i].text)) { skipLine.add(i); surplus--; }
-        }
+          if (prev < 0 || !scan[prev].desc || scan[prev].text.toLowerCase() === t.toLowerCase()) return false;   // two visits to one shop
+          return knownHolder(t) || (!/\b[a-z]-[a-z]\b/i.test(t) && looksLikeCardholder(t));
+        }).map(i => ({ i, score: (knownHolder(scan[i].text) ? 2 : 0) + (nextIsBoundary(i) ? 1 : 0) }))
+          .sort((a, b) => b.score - a.score || b.i - a.i);
+        for (const c of cands) { if (surplus <= 0) break; skipLine.add(c.i); surplus--; }
       }
       /* With a cardholder label under every row, a name sitting straight under
          another name (no label between) is that shop's name wrapping onto a
@@ -1380,6 +1442,8 @@ tailwind.config = {
         const left = names.filter(i => !skipLine.has(i) && !wrapLine.has(i));
         for (let k = 0; k < surplus; k++) skipLine.add(left[k]);
       }
+      // One name per amount now: each one is its own row, never glued to the last.
+      names.forEach(i => { if (!skipLine.has(i) && !wrapLine.has(i)) rowStart.add(i); });
     }
 
     /* Names listed first, amounts after: if there are at least as many names as
@@ -1549,6 +1613,11 @@ tailwind.config = {
         }
         if (lastWasDesc && pending.length && !rowStart.has(lineIdx)) {
           const last = pending[pending.length - 1];
+          // "PHOTOGRAPHY" / "BY GODSEY": a line that opens with a joining word continues the name.
+          if (/^(by|of|and|the|at|&|on)\s/i.test(leftover) || /(&|\bof|\band|\bthe|-)\s*$/i.test(last.desc)) {
+            last.desc = (last.desc + ' ' + leftover).trim();
+            return;
+          }
           // A cardholder name read just after the previous row's amount belongs
           // to that row, not to the merchant coming next. Start fresh.
           if (interleaved && last.afterRow && isHolder(last.desc) && !isHolder(leftover)) {
@@ -2730,7 +2799,7 @@ tailwind.config = {
         <div class="pb-2 border-b border-line">${cats.map(c => { const st = catStyle(c.name); return `
           <button data-flowcat="${esc(c.name)}" class="w-full text-left px-5 py-2.5 active:bg-page">
             <div class="flex items-center gap-3">
-              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${st.color}22">${iconSvg(st.icon, st.color, 16)}</span>
+              <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${st.color}22">${emojiGlyph(c.name, 21)}</span>
               <span class="flex-1 min-w-0 text-[15px] font-medium truncate">${esc(c.name)}</span>
               <span class="num text-[15px] font-semibold">${money(c.total)}</span>
             </div>
@@ -2868,7 +2937,7 @@ tailwind.config = {
         const st = catStyle(c.name), d = c.total - c.prev;
         const chg = c.prev ? `<span class="num text-[12px] ${d > 0 ? 'text-over' : 'text-income'}">${d > 0 ? '\u2191' : '\u2193'} ${money(Math.abs(d))}</span>` : `<span class="text-[12px] text-muted">new</span>`;
         return `<div class="px-5 py-2.5 flex items-center gap-3">
-          <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${st.color}22">${iconSvg(st.icon, st.color, 16)}</span>
+          <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${st.color}22">${emojiGlyph(c.name, 21)}</span>
           <div class="flex-1 min-w-0"><p class="text-[15px] font-medium truncate">${esc(c.name)}</p><p class="text-[12px] text-muted">${c.n} purchase${c.n === 1 ? '' : 's'} · ${sharePct(c.total, r.spent)}</p></div>
           <div class="text-right"><p class="num text-[15px] font-semibold">${money(c.total)}</p>${chg}</div></div>`; }).join('')}</div>`;
     const freq = r.frequent.length ? sec('Small, frequent buys', `<div class="pb-2 border-b border-line">${r.frequent.map(m => `
@@ -4088,7 +4157,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-01 · 101';
+  const BUILD = '2026-11-07 · 102';
 
   /* =============================================================
      KEEPING THE DATA
