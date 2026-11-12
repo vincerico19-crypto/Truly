@@ -1040,6 +1040,7 @@ tailwind.config = {
   /* Some shops say exactly what they are, so their row gets a closer emoji
      than their category: a dentist is a tooth, not a pill. */
   const DESC_EMOJI = [
+    [/\b(loc|loan|line of credit|heloc)\b/i, '🧾'],
     [/\b(allstate|farmers ins\w*|geico|progressive|state ?farm|liberty mutual|usaa ins\w*|nationwide|insurance)\b/i, '☂️'],
     [/\b(t-?\s?mobile|verizon|at&t|at ?and ?t|cricket|metro ?by|mint mobile|boost mobile|visible|straight ?talk|wireless)\b/i, '📱'],
     [/\b(netflix|hulu|disney\+?|hbo|max\.com|wb studio\w*|paramount|peacock|youtube tv)\b/i, '🎬'],
@@ -1061,6 +1062,7 @@ tailwind.config = {
   // Money moved between your own accounts or paid to a card.
   function xferEmoji(t) {
     const d = (t && t.desc) || '';
+    if (/\b(loc|loan|line of credit|heloc|lending)\b/i.test(d)) return '🧾';   // paying down a loan
     if (/\b(zelle|venmo|cash ?app|paypal)\b/i.test(d) || /^\s*to\s+(?!savings|checking|account|parents|ssfcu)/i.test(d)) return '💸';
     if (t.payTo || /\b(payment to|pmt|payment|autopay|thank you|capital one|amex|american express|discover|chase card|citi|synchrony)\b/i.test(d) || (() => { const p = payTarget(t); return p && accounts[p] && acctIcon(p) === 'card'; })()) return '💳';
     return '🔄';
@@ -4201,7 +4203,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-11 · 107';
+  const BUILD = '2026-11-12 · 108';
 
   /* =============================================================
      KEEPING THE DATA
