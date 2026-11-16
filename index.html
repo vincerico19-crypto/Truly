@@ -836,7 +836,7 @@ tailwind.config = {
       .replace(/\b[xX*]{2,}\d+\b/g, ' ')
       .replace(/#\s?\d+/g, ' ')
       .replace(/\b\d{5,}\b/g, ' ')
-      .replace(/\b[A-Z]{2}\b(?=\s*$)/g, ' ')          // trailing state code
+      .replace(/(?<=[A-Za-z].*\s)\b[A-Z]{2}\b(?=\s*$)/g, ' ')   // trailing state code, never the whole name ("HP", "BP")
       .replace(/[$\u20ac\u00a3]/g, ' ')
       .replace(/\b(usd|cr|dr)\b/gi, ' ')
       .replace(/[|;,()\[\]\t]+/g, ' ')
@@ -1619,7 +1619,13 @@ tailwind.config = {
         // A bank app puts the category on its own line under the merchant.
         const asCat = asCategory(leftover);
         if (asCat) {
-          if (pending.length) pending[pending.length - 1].cat = asCat;
+          /* The bank's label is a hint; a shop we know beats it ("Nintendo" is
+             a game, even when the bank files it under Internet). The label
+             belongs to the row just above it, even if that row is finished. */
+          const pick = r => { const g = guessCategory(r.desc || '', false); return g && g !== 'Uncategorized' ? g : asCat; };
+          const lastRow = rows[rows.length - 1];
+          if (pending.length) pending[pending.length - 1].cat = pick(pending[pending.length - 1]);
+          else if (lastRow && !lastRow.labelled) { lastRow.cat = rememberedCat(lastRow.desc) || pick(lastRow); lastRow.labelled = true; }
           else heldCat = asCat;
           lastWasDesc = false;
           return;
@@ -4203,7 +4209,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-12 · 108';
+  const BUILD = '2026-11-14 · 109';
 
   /* =============================================================
      KEEPING THE DATA
