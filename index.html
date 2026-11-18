@@ -551,10 +551,11 @@ tailwind.config = {
       // money, not spending. Catch them up so they leave the budget total.
       if (!t.xfer && (t.cat === 'Transfer' || looksLikeTransfer(t.desc || ''))) t.xfer = true;
     });
-    const firstRun = !settings.payFix95 || !settings.autoFix96;
+    const firstRun = !settings.payFix95 || !settings.autoFix96 || !settings.rewardFix112;
     const merged = mergeAliasAccounts();
     repairDoublePayments();
     markAutoAnchors();
+    fixRewards();
     if (merged || firstRun) save();
   }
 
@@ -579,6 +580,17 @@ tailwind.config = {
   /* Builds before 96 re-saved both balances after Pay a card. Those figures
      were worked out by Truly, not typed from the bank, so mark them: entries
      pasted afterwards (even dated earlier) then count toward the balance. */
+  // Rewards saved before build 112 as card payments become reward credits.
+  function fixRewards() {
+    if (settings.rewardFix112) return;
+    settings.rewardFix112 = true;
+    transactions.forEach(t => {
+      if (t.xfer && isRewardDesc(t.desc) && acctIcon(t.acct || 'Unassigned') === 'card' && !t.payTo) {
+        t.xfer = false; t.cat = 'Rewards'; t.amount = -Math.abs(t.amount);
+      }
+    });
+  }
+
   function markAutoAnchors() {
     if (settings.autoFix96) return;
     settings.autoFix96 = true;
@@ -948,7 +960,8 @@ tailwind.config = {
     'Auto Repair':    ['#8FA9C4', 'carfix', '🔧'],
     'Phone':          ['#4F93D6', 'phone', '📱'],
     'Personal Care':  ['#B266A8', 'scissors', '💈'],
-    'P2P Transfers':  ['#4F93D6', 'swap', '💸'],      // Zelle, Venmo, Cash App
+    'P2P Transfers':  ['#4F93D6', 'swap', '💸'],
+    'Rewards':        ['#C9A04A', 'tag', '🎁'],      // cash back or points redeemed      // Zelle, Venmo, Cash App
     'Income':         ['#35C08A', 'inflow', '💵'],   // money in is green
     'Uncategorized':  ['#93A1AE', 'tag', '🏷️']
   };
@@ -1078,6 +1091,7 @@ tailwind.config = {
   // The icon beside one transaction.
   function txChip(t, box) {
     if (t.xfer) return emojiChip(xferEmoji(t), box);
+    if (isReward(t)) return catChip('Rewards', box);
     if (t.amount < 0) return catChip('Income', box);
     const e = descEmoji(t.desc);
     return e ? emojiChip(e, box) : catChip(t.cat, box);
@@ -2364,8 +2378,15 @@ tailwind.config = {
   /* A refund that lands on a credit card ("Amazon · Merchandise Return") never
      reaches your bank account. It lowers what you owe on the card and takes
      back part of what you spent, so it is not money in. */
+  /* Cash back or points redeemed. On a card it lowers what you owe, but it is
+     neither spending taken back nor money that reached you. */
+  const REWARD_RE = /\b(cash ?back|rewards?|redemption|redeem(ed)?|points? (credit|redemption)|miles redemption|purchase eraser|pay ?with ?points)\b/i;
+  function isRewardDesc(d) { return REWARD_RE.test(d || '') && !/\b(refund|return)\b/i.test(d || ''); }
+  function isReward(t) { return !!t && !t.xfer && t.amount < 0 && (t.cat === 'Rewards' || isRewardDesc(t.desc)); }
+  function isCardReward(t) { return isReward(t) && acctIcon(t.acct || 'Unassigned') === 'card'; }
   function isCardRefund(t) {
     if (!t || t.xfer || !(t.amount < 0)) return false;
+    if (isReward(t)) return false;
     const a = t.acct || 'Unassigned';
     if (a === 'Unassigned') return false;
     return acctIcon(a) === 'card';
@@ -2373,7 +2394,7 @@ tailwind.config = {
   // Spending: purchases, less refunds that came back to a card.
   function isSpend(t) { return !t.xfer && (t.amount > 0 || isCardRefund(t)); }
   // Money that actually came in to you.
-  function isMoneyIn(t) { return !t.xfer && t.amount < 0 && !isCardRefund(t); }
+  function isMoneyIn(t) { return !t.xfer && t.amount < 0 && !isCardRefund(t) && !isCardReward(t); }
   // A card refund nets against the kind of thing it refunds ("Amazon" → Shopping).
   function spendCat(t) {
     if (!isCardRefund(t)) return t.cat;
@@ -4292,6 +4313,9 @@ tailwind.config = {
       draft = draftDupes; draftDupes = [];
       draftNotes = notes.concat(['Every row here looks like something already saved. Check before saving.']);
     }
+    draft.concat(draftDupes).forEach(r => {
+      if (isRewardDesc(r.desc)) { r.dir = 'in'; r.cat = 'Rewards'; delete r.payTo; delete r.guessedDir; }
+    });
     const uniq = Array.from(new Set(rows.map(r => r.acct)));
     let detected = (uniq.length === 1 && uniq[0] !== 'Unassigned') ? uniq[0] : '';
     if (pasteForAcct) {                              // opened from this account's sheet
@@ -4646,7 +4670,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 111';
+  const BUILD = '2026-11-18 · 112';
 
   /* =============================================================
      KEEPING THE DATA
