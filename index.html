@@ -234,19 +234,10 @@ tailwind.config = {
 
 <div id="panel-cards" class="hidden">
   <h2 class="px-1 text-[20px] font-bold tracking-tight">Cards &amp; accounts</h2>
-  <section class="mt-3 bg-card rounded-2xl border border-line p-4">
-    <p class="text-[16px] font-bold tracking-tight mb-1">Pay a card</p>
-    <p class="text-[13px] text-muted leading-relaxed mb-3">Paying a card down? Log it here and both sides move at once — the card drops, the account it came from drops, and your spending total is untouched.</p>
-    <div class="space-y-2">
-      <div class="flex gap-2">
-        <select id="payCard" class="cell text-[15px] flex-1" aria-label="Card being paid"></select>
-        <input id="payAmount" type="number" inputmode="decimal" step="0.01" min="0" class="cell num text-[15px] w-28 shrink-0 text-right" placeholder="Amount" aria-label="Payment amount">
-      </div>
-      <div class="flex gap-2">
-        <select id="payFrom" class="cell text-[15px] flex-1" aria-label="Paid from"></select>
-        <button id="recordPay" class="h-[42px] px-4 rounded-xl bg-accent text-white text-[15px] font-semibold active:opacity-80 shrink-0">Record</button>
-      </div>
-    </div>
+  <section class="mt-3 grid grid-cols-3 gap-2">
+    <button id="cardsPay" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">💳</span><span class="block text-[14px] font-semibold mt-1">Pay a card</span></button>
+    <button id="cardsAddCard" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">➕</span><span class="block text-[14px] font-semibold mt-1">Add a card</span></button>
+    <button id="cardsAddBank" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">🏦</span><span class="block text-[14px] font-semibold mt-1">Add a bank</span></button>
   </section>
   <section class="mt-3 bg-card rounded-2xl border border-line p-4">
     <p class="text-[16px] font-bold tracking-tight mb-1">Balances, limits &amp; due dates</p>
@@ -1008,6 +999,12 @@ tailwind.config = {
   function cardArt(name) { return CARD_ART.find(a => a.re.test(String(name || ''))) || null; }
   // The tile beside an account everywhere it is listed.
   function acctTile(name, box, px, radius) {
+    const look = typeof accounts !== 'undefined' && accounts[name] && accounts[name].look;
+    if (look) {
+      const mark = look.icon === 'initials' ? `<span style="font-weight:700;font-size:${Math.round(box * 0.36)}px;color:${look.letter}">${esc(initials(name))}</span>`
+        : look.icon ? `<span style="font-size:${Math.round(box * 0.5)}px;line-height:1;font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">${look.icon}</span>` : '';
+      return `<span class="shrink-0 grid place-items-center rounded-[${radius}]" style="width:${box}px;height:${box}px;background:${lookBg(look)};box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.08)">${mark}</span>`;
+    }
     const art = cardArt(name);
     if (!art) {
       const c = acctColor(name);
@@ -2106,7 +2103,6 @@ tailwind.config = {
     renderTransactions(list);
     renderLearned();
     renderBalances();
-    renderPayPickers();
     renderNag();
   }
 
@@ -2180,6 +2176,8 @@ tailwind.config = {
   const ACCT_COLORS = { 'Capital One': '#E2614A', 'Capital One Savor': '#DD6A50', 'Capital One Venture X': '#4B6FB0', 'Capital One Venture': '#5B83C0', 'Capital One Quicksilver': '#98A4B2', 'Frost': '#3F7CB8', 'Amex': '#5596CE', 'Discover': '#E09E3F', 'Chase': '#5684C0', 'Citi': '#4197B3', 'Apple Card': '#7F98A6', 'Checking': '#6285BC', 'Savings': '#2FA383', 'Cash': '#63AC52', 'PayPal': '#5185B8', 'Venmo': '#48A4B3', 'Cash App': '#45B39D', 'Unassigned': '#93A1AE' };
   // A bank looks like a bank, a card like a card, a payment app like an exchange.
   function acctIcon(n) {
+    const ty = typeof accounts !== 'undefined' && accounts[n] && accounts[n].type;
+    if (ty) return ty === 'card' ? 'card' : ty === 'savings' ? 'vault' : 'bank';
     const k = String(n).toLowerCase();
     if (/venmo|paypal|cash ?app|zelle|apple cash/.test(k)) return 'swap';
     if (/savings|vault/.test(k)) return 'vault';
@@ -3438,6 +3436,115 @@ tailwind.config = {
   }
 
   /* =============================================================
+     CARD LOOKS
+     A generic look that matches a card: colour, finish, lettering. Card and
+     bank names are plain text; no issuer logos or card art are used.
+  ============================================================= */
+  const LETTER = { silver: '#DCE2EC', gold: '#E8D3A0', white: '#FFFFFF', black: '#15181C' };
+  const SWATCHES = ['#0C162B', '#123A6B', '#2E86E0', '#2BB0C9', '#1F6B5A', '#35C08A', '#7FB539', '#C9A04A',
+                    '#F28A2E', '#B2532E', '#D9483B', '#B8285C', '#E26FB4', '#7A4FD6', '#C5CBD3', '#2B2F37'];
+  function shade(hex, f) {               // f < 0 darker, f > 0 lighter
+    const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const t = f < 0 ? 0 : 255, p = Math.abs(f);
+    r = Math.round(r + (t - r) * p); g = Math.round(g + (t - g) * p); b = Math.round(b + (t - b) * p);
+    return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+  function lookBg(l) {
+    const c1 = l.color || '#2B2F37', c2 = l.color2 || shade(c1, -0.55);
+    const sheen = 'linear-gradient(115deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.16) 50%,rgba(255,255,255,0) 65%)';
+    switch (l.finish) {
+      case 'matte': return `linear-gradient(135deg,${c1},${shade(c1, -0.25)})`;
+      case 'gradient': return `linear-gradient(135deg,${c1},${l.color2 || shade(c1, 0.35)})`;
+      case 'glossy': return `radial-gradient(120% 70% at 30% 0%,rgba(255,255,255,.28),rgba(255,255,255,0) 55%),linear-gradient(135deg,${c1},${c2})`;
+      case 'glass': return `linear-gradient(135deg,${c1}99,${c2}55)`;
+      default: return `${sheen},linear-gradient(135deg,${c1},${c2})`;   // metal
+    }
+  }
+  function initials(n) { return String(n).replace(/^capital one\s+/i, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase(); }
+  // The big card picture used while adding or styling a card.
+  function cardFace(l, name, l4, network, w) {
+    const h = Math.round(w * 0.63), lc = l.letter || LETTER.silver;
+    const mark = l.icon === 'initials' ? `<span style="font-weight:700;font-size:${w * 0.07}px;color:${lc}">${esc(initials(name))}</span>`
+      : l.icon ? `<span style="font-size:${w * 0.08}px;font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">${l.icon}</span>` : '';
+    return `<div style="width:${w}px;height:${h}px;border-radius:${w * 0.055}px;background:${lookBg(l)};position:relative;margin:0 auto;color:${lc};box-shadow:0 10px 28px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.2)${l.finish === 'glass' ? ',inset 0 0 0 1px rgba(255,255,255,.25)' : ''}">
+      <div style="position:absolute;right:${w * 0.055}px;top:${w * 0.045}px">${mark}</div>
+      <div style="position:absolute;left:${w * 0.06}px;top:${h * 0.33}px;width:${w * 0.12}px;height:${w * 0.09}px;border-radius:5px;background:linear-gradient(135deg,#d9d2bd,#a8a08a)"></div>
+      <div style="position:absolute;left:${w * 0.06}px;bottom:${h * 0.22}px;font-size:${w * (String(name).replace(/^capital one\s+/i, '').length > 16 ? 0.036 : 0.045)}px;letter-spacing:${String(name).replace(/^capital one\s+/i, '').length > 16 ? '.12em' : '.3em'};font-weight:500;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${w * 0.86}px">${esc(String(name).replace(/^capital one\s+/i, ''))}</div>
+      <div class="num" style="position:absolute;left:${w * 0.06}px;bottom:${h * 0.08}px;font-size:${w * 0.045}px;letter-spacing:.1em">${l4 ? '•• ' + esc(l4) : ''}</div>
+      <div style="position:absolute;right:${w * 0.055}px;bottom:${h * 0.08}px;font-size:${w * 0.038}px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">${esc(network || '')}</div>
+    </div>`;
+  }
+  // [name, network, colour, second colour, finish, lettering]
+  const CARD_CATALOG = [
+    ['Capital One Venture X', 'Visa', '#2A3D63', '#0C162B', 'metal', 'silver'],
+    ['Capital One Venture', 'Visa', '#5A6170', '#2B2F37', 'metal', 'silver'],
+    ['Capital One VentureOne', 'Mastercard', '#C5CBD3', '#8D95A1', 'matte', 'black'],
+    ['Capital One Savor', 'Mastercard', '#B2532E', '#3A1C12', 'metal', 'white'],
+    ['Capital One SavorOne', 'Mastercard', '#C46A3E', '#5A2A16', 'matte', 'white'],
+    ['Capital One Quicksilver', 'Visa', '#C5CBD3', '#7D8590', 'metal', 'black'],
+    ['Capital One Platinum', 'Mastercard', '#9AA3AE', '#4C535C', 'matte', 'white'],
+    ['Chase Sapphire Reserve', 'Visa', '#1A2A44', '#070D18', 'metal', 'silver'],
+    ['Chase Sapphire Preferred', 'Visa', '#123A6B', '#081A33', 'metal', 'silver'],
+    ['Chase Freedom Unlimited', 'Visa', '#2E5F9E', '#163259', 'glossy', 'white'],
+    ['Chase Freedom Flex', 'Mastercard', '#2A4E8A', '#121F3A', 'glossy', 'white'],
+    ['Chase Amazon Prime Visa', 'Visa', '#1E2A36', '#0B1117', 'matte', 'silver'],
+    ['Amex Platinum', 'Amex', '#D2D6DB', '#8E959E', 'metal', 'black'],
+    ['Amex Gold', 'Amex', '#E2BE6A', '#A97E2C', 'metal', 'black'],
+    ['Amex Green', 'Amex', '#3E7D5E', '#1C3D2D', 'matte', 'white'],
+    ['Amex Blue Cash Preferred', 'Amex', '#2F93E0', '#0E3558', 'glossy', 'white'],
+    ['Amex Blue Cash Everyday', 'Amex', '#5FB3EE', '#1F5E92', 'glossy', 'white'],
+    ['Amex Delta SkyMiles', 'Amex', '#1C3B6E', '#0B1A33', 'metal', 'silver'],
+    ['Amex Hilton Honors', 'Amex', '#6F7A86', '#2E343B', 'matte', 'white'],
+    ['Discover it', 'Discover', '#F28A2E', '#C9561A', 'gradient', 'white'],
+    ['Discover it Miles', 'Discover', '#2BB0C9', '#13606F', 'gradient', 'white'],
+    ['Citi Double Cash', 'Mastercard', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Citi Custom Cash', 'Mastercard', '#2BB0C9', '#0E4A57', 'gradient', 'white'],
+    ['Citi Premier', 'Mastercard', '#1B2F4F', '#0A1424', 'metal', 'silver'],
+    ['Citi Costco Anywhere', 'Visa', '#3A3F46', '#16191D', 'matte', 'silver'],
+    ['Wells Fargo Active Cash', 'Visa', '#B8285C', '#5C1230', 'gradient', 'white'],
+    ['Wells Fargo Autograph', 'Visa', '#2B2F37', '#0E1013', 'metal', 'gold'],
+    ['Bank of America Customized Cash', 'Visa', '#D9483B', '#7A1F18', 'glossy', 'white'],
+    ['Bank of America Travel Rewards', 'Visa', '#123A6B', '#081A33', 'glossy', 'white'],
+    ['US Bank Altitude Go', 'Visa', '#2B2F37', '#0E1013', 'matte', 'white'],
+    ['US Bank Cash+', 'Visa', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Apple Card', 'Mastercard', '#F2F3F5', '#C9CCD1', 'metal', 'black'],
+    ['Bilt Mastercard', 'Mastercard', '#15181C', '#000000', 'metal', 'silver'],
+    ['Navy Federal cashRewards', 'Visa', '#123A6B', '#081A33', 'glossy', 'white'],
+    ['Navy Federal More Rewards', 'Visa', '#1F6B5A', '#0B2E27', 'glossy', 'white'],
+    ['USAA Cashback Rewards Plus', 'Visa', '#1C3B6E', '#0B1A33', 'matte', 'white'],
+    ['PenFed Power Cash', 'Visa', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Security Service FCU Visa', 'Visa', '#123A6B', '#2E86E0', 'gradient', 'white'],
+    ['Target Circle Card', 'Mastercard', '#D9483B', '#8A1E16', 'glossy', 'white'],
+    ['Walmart Rewards Card', 'Mastercard', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Amazon Store Card', 'Store card', '#2B2F37', '#0E1013', 'matte', 'white'],
+    ['Synchrony Car Care', 'Store card', '#7D8590', '#2B2F37', 'matte', 'white'],
+    ['Costco Credit Card', 'Visa', '#3A3F46', '#16191D', 'matte', 'silver'],
+    ['Southwest Rapid Rewards', 'Visa', '#2E5F9E', '#C9A04A', 'gradient', 'white'],
+    ['United Explorer', 'Visa', '#1C3B6E', '#0B1A33', 'metal', 'silver'],
+    ['Marriott Bonvoy', 'Visa', '#3A3F46', '#16191D', 'metal', 'gold'],
+  ];
+  // [name, kind, colour, second colour]
+  const BANK_CATALOG = [
+    ['Frost Bank', 'checking', '#2B6CA8', '#0D2238'], ['Chase Checking', 'checking', '#123A6B', '#081A33'],
+    ['Bank of America', 'checking', '#D9483B', '#7A1F18'], ['Wells Fargo', 'checking', '#B8285C', '#5C1230'],
+    ['Citi', 'checking', '#2E86E0', '#123A6B'], ['US Bank', 'checking', '#1C3B6E', '#0B1A33'],
+    ['Capital One 360 Checking', 'checking', '#2A3D63', '#0C162B'], ['Capital One 360 Savings', 'savings', '#2A3D63', '#0C162B'],
+    ['Ally Savings', 'savings', '#7A4FD6', '#3A2370'], ['Marcus Savings', 'savings', '#2B2F37', '#0E1013'],
+    ['SoFi Checking', 'checking', '#2BB0C9', '#0E4A57'], ['SoFi Savings', 'savings', '#2BB0C9', '#0E4A57'],
+    ['Chime', 'checking', '#35C08A', '#1F6B5A'], ['Discover Bank', 'checking', '#F28A2E', '#C9561A'],
+    ['Navy Federal Checking', 'checking', '#123A6B', '#081A33'], ['Navy Federal Savings', 'savings', '#123A6B', '#081A33'],
+    ['USAA Checking', 'checking', '#1C3B6E', '#0B1A33'], ['USAA Savings', 'savings', '#1C3B6E', '#0B1A33'],
+    ['Security Service FCU', 'checking', '#123A6B', '#2E86E0'], ['Randolph-Brooks FCU', 'checking', '#1F6B5A', '#0B2E27'],
+    ['PenFed', 'checking', '#2E86E0', '#123A6B'], ['TD Bank', 'checking', '#35C08A', '#1F6B5A'],
+    ['PNC', 'checking', '#F28A2E', '#5A2A16'], ['Truist', 'checking', '#7A4FD6', '#3A2370'],
+    ['Charles Schwab', 'checking', '#2E86E0', '#123A6B'], ['Cash', 'checking', '#35C08A', '#1F6B5A'],
+  ];
+  function catalogLook(entry, bank) {
+    if (bank) return { color: entry[2], color2: entry[3], finish: 'gradient', letter: 'white', icon: entry[1] === 'savings' ? '🐷' : '🏦' };
+    return { color: entry[2], color2: entry[3], finish: entry[4], letter: entry[5], icon: '' };
+  }
+
+  /* =============================================================
      ADD / PAY FLOW
      One button for everything. A card payment is picked, priced and
      confirmed on screen before anything saves, and it can be undone.
@@ -3555,7 +3662,8 @@ tailwind.config = {
           ${acctTile(n, 44, 19, '.7rem')}
           <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted mt-0.5">${sub}</span></span>
           <span class="text-right"><span class="num block text-[16px] font-bold">${money(owed)}</span><span class="block text-[12px] text-muted">owed</span></span></button>`;
-      }).join('') : `<p class="text-muted text-[15px] mt-4">No cards yet. Add one in the Cards tab first.</p>`);
+      }).join('') : `<p class="text-muted text-[15px] mt-4">No cards yet.</p>`) +
+        `<button data-add="nc-add-card" class="w-full flex items-center gap-3 rounded-2xl border border-dashed border-line px-3.5 py-3 mt-2.5 text-left active:opacity-70"><span class="grid place-items-center text-muted text-xl" style="width:44px;height:44px">+</span><span class="text-[16px] font-semibold">Add a card</span></button>`;
     } else if (st.step === 'amount') {
       const owed = Math.max(balanceDetail(st.card).now, 0), minP = Number((accounts[st.card] || {}).minPay) || 0;
       const chips = [['full', 'Full balance', owed], ['half', 'Half', Math.round(owed * 50) / 100]];
@@ -3590,6 +3698,37 @@ tailwind.config = {
         <div class="flex justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px]"><span class="text-muted">Your spending</span><span>${spendNote}</span></div>
         <div class="flex justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px]"><span class="text-muted">Date</span><span>${esc(dayLabel(rows[0].date))}</span></div>` +
         ABTN('save', 'Done');
+    } else if (st.step === 'nc-search') {
+      h = (st.from0 ? ABACK(st.from0) : '') + AH(st.bank ? 'Add a bank account' : 'Add a card', st.bank ? 'Find yours, or add your own.' : 'Find yours and Truly matches the look.') +
+        `<label class="flex items-center gap-2.5 rounded-2xl border border-line bg-page/40 px-4 py-3 mt-3"><span class="text-muted">🔍</span>
+          <input data-addf="q" value="${esc(st.q || '')}" placeholder="${st.bank ? 'Bank or credit union' : 'Card name, like Venture X'}" class="bg-transparent flex-1 text-[16px] outline-none" autocomplete="off"></label>
+         <div id="ncResults">${ncResults()}</div>`;
+    } else if (st.step === 'nc-form') {
+      const isCard = !st.bank;
+      const f = (key, label, ph, type) => `<label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5"><span class="text-muted text-[15px] shrink-0 mr-3">${label}</span>
+        <input data-addf="${key}" value="${esc(st[key] || '')}" placeholder="${ph}" ${type ? `type="${type}" inputmode="decimal"` : ''} class="bg-transparent text-right text-[15px] font-medium outline-none min-w-0 flex-1"></label>`;
+      h = ABACK('nc-search') + AH(esc(st.name || (isCard ? 'New card' : 'New account'))) +
+        `<div class="mt-4" id="ncFace">${cardFace(st.look, st.name || (isCard ? 'My card' : 'My bank'), st.last4, st.network, 300)}</div>` +
+        f('name', 'Name', isCard ? 'Travel card' : 'My checking') +
+        f('last4', 'Last 4', '1234', 'number') +
+        (isCard ? f('limit', 'Credit limit', '$5,000', 'number') + f('owed', 'Owed right now', '$0.00', 'number') +
+                  f('dueDay', 'Due day of month', '16', 'number') + f('minPay', 'Minimum payment', 'optional', 'number')
+                : f('owed', 'Balance right now', '$0.00', 'number')) +
+        `<button data-add="nc-look" class="w-full flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px] active:opacity-70"><span class="text-muted">Look</span><span style="color:#5fb6f0">Customize ›</span></button>` +
+        ABTN('nc-save', isCard ? 'Add card' : 'Add account');
+    } else if (st.step === 'nc-look') {
+      const L = st.look;
+      const seg = (key, vals) => `<div class="flex flex-wrap gap-2 mt-2">${vals.map(([v, lbl]) => `<button data-look="${key}" data-v="${esc(v)}" class="px-3 py-2 rounded-xl text-[14px] font-semibold border ${L[key] === v ? 'border-ledger bg-ledger/15' : 'border-line bg-page/40'} active:opacity-70">${lbl}</button>`).join('')}</div>`;
+      const lbl = t => `<p class="text-[12px] tracking-[.07em] uppercase text-muted font-semibold mt-4">${t}</p>`;
+      h = ABACK(st.edit ? 'close' : 'nc-form') + AH(st.edit ? esc(st.edit) : 'Customize') +
+        `<div class="mt-4" id="ncFace">${cardFace(L, st.name, st.last4, st.network, 280)}</div>` +
+        lbl('Color') + `<div class="grid grid-cols-8 gap-2.5 mt-2">${SWATCHES.map(c => `<button data-look="color" data-v="${c}" aria-label="Color ${c}" class="aspect-square rounded-full" style="background:${c};${L.color === c ? 'outline:3px solid #fff;outline-offset:2px' : ''}"></button>`).join('')}</div>
+          <label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-2.5 mt-2.5"><span class="text-muted text-[14px]">Any color</span><input type="color" data-lookc="color" value="${esc(L.color)}" class="w-12 h-8 bg-transparent"></label>
+          <label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-2.5 mt-2"><span class="text-muted text-[14px]">Second color</span><input type="color" data-lookc="color2" value="${esc(L.color2 || shade(L.color, -0.55))}" class="w-12 h-8 bg-transparent"></label>` +
+        lbl('Finish') + seg('finish', [['metal', 'Metal'], ['matte', 'Matte'], ['glossy', 'Glossy'], ['gradient', 'Gradient'], ['glass', 'Glass']]) +
+        lbl('Lettering') + seg('letter', [[LETTER.silver, 'Silver'], [LETTER.gold, 'Gold'], [LETTER.white, 'White'], [LETTER.black, 'Black']]) +
+        lbl('Icon') + `<div class="flex flex-wrap gap-2 mt-2">${['', 'initials', '✈️', '🛒', '🍔', '⛽', '💎', '⭐', '🏦', '🐷', '❄️', '💳'].map(v => `<button data-look="icon" data-v="${v}" class="h-10 min-w-[44px] px-2 rounded-xl border ${L.icon === v ? 'border-ledger bg-ledger/15' : 'border-line bg-page/40'} text-[${v && v !== 'initials' ? '22' : '14'}px] font-semibold active:opacity-70" style="font-family:'Apple Color Emoji','Noto Color Emoji',-apple-system,sans-serif">${v === '' ? 'None' : v === 'initials' ? esc(initials(st.name) || 'AB') : v}</button>`).join('')}</div>` +
+        ABTN(st.edit ? 'look-save' : 'nc-lookdone', st.edit ? 'Save look' : 'Use this look');
     } else if (st.step === 'done') {
       h = `<div class="text-center pt-8">
           <div class="mx-auto w-20 h-20 rounded-full grid place-items-center text-[38px]" style="background:#16261F;border:2px solid #35C08A;color:#35C08A">✓</div>
@@ -3599,10 +3738,52 @@ tailwind.config = {
     box.innerHTML = h;
   }
 
+  function ncResults() {
+    const st = addState, q = String(st.q || '').toLowerCase().trim();
+    const list = st.bank ? BANK_CATALOG : CARD_CATALOG;
+    const words = q.split(/\s+/).filter(Boolean);
+    const hits = list.filter(e => words.every(w => e[0].toLowerCase().includes(w))).slice(0, q ? 12 : 8);
+    const mini = (l, net) => `<span class="shrink-0 relative" style="width:58px;height:37px;border-radius:6px;background:${lookBg(l)};box-shadow:inset 0 1px 0 rgba(255,255,255,.2)">${net ? `<i class="not-italic absolute right-1 bottom-0.5 text-[7px] font-bold tracking-wide uppercase" style="color:${l.letter}">${esc(net)}</i>` : ''}</span>`;
+    const row = (i, e) => {
+      const l = catalogLook(e, st.bank);
+      const sub = st.bank ? (e[1] === 'savings' ? 'Savings' : 'Checking') : e[4][0].toUpperCase() + e[4].slice(1) + ' · ' + e[1];
+      return `<button data-ncpick="${i}" class="w-full flex items-center gap-3.5 py-2.5 border-b border-line text-left active:opacity-70">${mini(l, st.bank ? '' : e[1])}
+        <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(e[0])}</span><span class="block text-[13px] text-muted">${esc(sub)}</span></span><span class="text-muted">›</span></button>`;
+    };
+    return `<p class="text-[12px] tracking-[.07em] uppercase text-muted font-semibold mt-4 mb-1">${q ? (hits.length ? 'Matches' : 'No match') : 'Popular'}</p>` +
+      hits.map(e => row(list.indexOf(e), e)).join('') +
+      `<button data-ncpick="own" class="w-full flex items-center gap-3.5 py-2.5 text-left active:opacity-70"><span class="shrink-0 grid place-items-center text-muted text-xl" style="width:58px;height:37px;border-radius:6px;border:1px dashed #4a5662">+</span>
+        <span class="flex-1"><span class="block text-[16px] font-semibold">Design my own</span><span class="block text-[13px] text-muted">${q ? 'Use “' + esc(st.q) + '” as the name' : 'Not on the list? Start blank.'}</span></span><span class="text-muted">›</span></button>`;
+  }
+  function refreshFace() { const f = $('ncFace'); if (f && addState) f.innerHTML = cardFace(addState.look, addState.name || (addState.bank ? 'My bank' : 'My card'), addState.last4, addState.network, addState.step === 'nc-look' ? 280 : 300); }
+  function openNewCard(bank, from0) {
+    addState = { step: 'nc-search', bank: !!bank, q: '', from0: from0 || null };
+    renderAdd(); openSheet($('addSheet'));
+  }
+  function openLookEditor(name) {
+    const info = accounts[name] || {};
+    const cat = CARD_CATALOG.find(e => e[0].toLowerCase() === name.toLowerCase());
+    const look = Object.assign({ color: '#2A3D63', finish: 'metal', letter: LETTER.silver, icon: '' }, cat ? catalogLook(cat) : {}, info.look || {});
+    if (look.letter && LETTER[look.letter]) look.letter = LETTER[look.letter];
+    addState = { step: 'nc-look', edit: name, name, last4: last4(name), network: info.network || (cat ? cat[1] : ''), look };
+    renderAdd(); openSheet($('addSheet'));
+  }
+  $('balancesList').addEventListener('click', function (e) {
+    const b = e.target.closest('[data-lookedit]');
+    if (b) { e.preventDefault(); openLookEditor(b.getAttribute('data-lookedit')); }
+  });
+  $('cardsPay').onclick = () => { addState = { step: 'card', kind: 'card', from: defaultFrom() }; renderAdd(); openSheet($('addSheet')); };
+  $('cardsAddCard').onclick = () => openNewCard(false);
+  $('cardsAddBank').onclick = () => openNewCard(true);
+
   $('addSheet').addEventListener('input', function (e) {
     const f = e.target.getAttribute && e.target.getAttribute('data-addf');
+    const lc = e.target.getAttribute && e.target.getAttribute('data-lookc');
+    if (lc && addState && addState.look) { addState.look[lc] = e.target.value; refreshFace(); return; }
     if (!f || !addState) return;
     addState[f] = e.target.value;
+    if (f === 'q') { $('ncResults').innerHTML = ncResults(); return; }
+    if (f === 'name' || f === 'last4') { if (f === 'last4') addState.last4 = String(addState.last4).replace(/\D/g, '').slice(-4); refreshFace(); return; }
     if (f === 'amount') { addState.pick = 'other'; this.querySelectorAll('[data-amtpick]').forEach(b => { const on = b.getAttribute('data-amtpick') === 'other'; b.classList.toggle('border-ledger', on); b.classList.toggle('bg-ledger/10', on); b.classList.toggle('border-line', !on); b.classList.toggle('bg-page/40', !on); }); }
   });
   $('addSheet').addEventListener('change', function (e) {
@@ -3612,7 +3793,18 @@ tailwind.config = {
   $('addSheet').addEventListener('click', function (e) {
     const st = addState; if (!st) return;
     const back = e.target.closest('[data-addback]');
-    if (back) { addGo({ step: back.getAttribute('data-addback') }); return; }
+    if (back) { const to = back.getAttribute('data-addback'); if (to === 'close') closeSheets(); else addGo({ step: to }); return; }
+    const np = e.target.closest('[data-ncpick]');
+    if (np) {
+      const v = np.getAttribute('data-ncpick'), list = st.bank ? BANK_CATALOG : CARD_CATALOG;
+      if (v === 'own') addGo({ step: 'nc-form', name: titleCase(String(st.q || '').trim()), network: '', last4: '',
+        look: st.bank ? { color: '#2E86E0', color2: '#123A6B', finish: 'gradient', letter: LETTER.white, icon: '🏦' } : { color: '#1F6B5A', finish: 'metal', letter: LETTER.silver, icon: '' } });
+      else { const en = list[+v], l = catalogLook(en, st.bank); l.letter = LETTER[l.letter] || l.letter;
+        addGo({ step: 'nc-form', name: en[0], network: st.bank ? '' : en[1], kindBank: st.bank ? en[1] : '', last4: '', look: l }); }
+      return;
+    }
+    const lk = e.target.closest('[data-look]');
+    if (lk) { st.look[lk.getAttribute('data-look')] = lk.getAttribute('data-v'); if (lk.getAttribute('data-look') === 'color') delete st.look.color2; renderAdd(); return; }
     const pc = e.target.closest('[data-pickcard]');
     if (pc) { const card = pc.getAttribute('data-pickcard'); const owed = Math.max(balanceDetail(card).now, 0);
       addGo({ step: 'amount', card, amount: owed ? owed.toFixed(2) : '', pick: owed ? 'full' : 'other', from: st.from || defaultFrom(), date: st.date || todayISO() }); return; }
@@ -3626,6 +3818,37 @@ tailwind.config = {
       setTimeout(() => { $('logOneBtn').onclick(); if (k === 'gotpaid' && draft.length) { draft[draft.length - 1].dir = 'in'; draft[draft.length - 1].cat = 'Income'; renderReview(); } }, 30);
     } else if (k === 'paste') { closeSheets(); openPasteSheet(); }
     else if (k === 'paid') addGo({ step: 'paidwhat' });
+    else if (k === 'nc-look') addGo({ step: 'nc-look' });
+    else if (k === 'nc-lookdone') addGo({ step: 'nc-form' });
+    else if (k === 'look-save') {
+      const info = accounts[st.edit] = accounts[st.edit] || {};
+      info.look = Object.assign({}, st.look);
+      save(); render(); renderAcctSheet(); renderBalances(); closeSheets(); toast('Look saved');
+    }
+    else if (k === 'nc-add-card') openNewCard(false, 'card')
+    else if (k === 'nc-save') {
+      const name = String(st.name || '').trim();
+      if (!name) { toast('Give it a name'); return; }
+      const exists = Object.keys(accounts).find(n => n.toLowerCase() === name.toLowerCase());
+      if (exists && !confirm(exists + ' is already in Truly. Update its details and look?')) return;
+      const key = exists || name, info = accounts[key] = accounts[key] || {};
+      info.type = st.bank ? (st.kindBank === 'savings' || /savings/i.test(name) ? 'savings' : 'checking') : 'card';
+      info.look = Object.assign({}, st.look);
+      if (st.network) info.network = st.network;
+      const l4 = String(st.last4 || '').replace(/\D/g, '').slice(-4); if (l4.length === 4) info.last4 = l4;
+      const num = v => Math.abs(parseFloat(String(v || '').replace(/[$,]/g, ''))) || 0;
+      if (!st.bank) {
+        if (num(st.limit)) info.limit = num(st.limit);
+        const d = Math.round(num(st.dueDay)); if (d >= 1 && d <= 31) { info.dueDay = d; delete info.dueDate; }
+        if (num(st.minPay)) info.minPay = num(st.minPay);
+      }
+      if (st.owed !== undefined && String(st.owed).trim() !== '' || !exists) {
+        info.balance = cents(num(st.owed)); info.asOf = todayISO(); info.asOfTime = Date.now(); delete info.auto;
+      }
+      save(); render(); renderAcctSheet(); renderBalances();
+      if (st.from0 === 'card' && !st.bank) { addGo({ step: 'card', kind: 'card', from: defaultFrom() }); toast(key + ' added'); }
+      else { closeSheets(); toast(key + ' added'); }
+    }
     else if (k === 'k-card') addGo({ step: 'card', kind: 'card', from: defaultFrom() });
     else if (k.startsWith('k-')) { const kind = k.slice(2), from = defaultFrom();
       addGo({ step: 'other', kind, from, to: kind === 'acct' ? (bankList().find(n => n !== from) || '') : '', app: 'Zelle', amount: '', date: todayISO() }); }
@@ -4343,29 +4566,6 @@ tailwind.config = {
     reader.readAsText(file);
   }
 
-  $('recordPay').onclick = function () {
-    const card = $('payCard').value, from = $('payFrom').value;
-    const amt = Math.abs(parseFloat($('payAmount').value) || 0);
-    if (!card || !from) { toast('Pick a card and an account'); return; }
-    if (!amt) { toast('Enter an amount'); return; }
-
-    /* Just log the payment. Both balances count it on their own (the card
-       through payTo, the bank because it is that account's row), so nothing
-       is re-anchored and anything you paste later still adds up. */
-    transactions.push({
-      id: uid(), at: Date.now(), date: todayISO(),
-      desc: 'Payment to ' + card, payTo: card,
-      cat: 'Transfer', acct: from, xfer: true, amount: amt
-    });
-
-    save(); render(); renderAcctSheet(); renderBalances();
-    $('payAmount').value = '';
-    const owedNow = balanceDetail(card).now;
-    showMsg($('dataMsg'), money(amt) + ' paid to ' + esc(card) + ' from ' + esc(from) + '. ' + esc(card) + ' now shows ' + money(owedNow) + '.', 'good');
-    $('dataMsg').classList.remove('hidden');
-    toast('Payment recorded');
-  };
-
   $('saveBalances').onclick = function () {
     let n = 0;
     $('balancesList').querySelectorAll('[data-bal]').forEach(el => {
@@ -4400,6 +4600,11 @@ tailwind.config = {
       } else {
         delete accounts[name].dueDate; delete accounts[name].dueDay;
       }
+    });
+    $('balancesList').querySelectorAll('[data-minp]').forEach(el => {
+      const name = el.getAttribute('data-minp'), v = Math.abs(parseFloat(el.value)) || 0;
+      const info = accounts[name] || (accounts[name] = {});
+      if (v) info.minPay = v; else delete info.minPay;
     });
     $('balancesList').querySelectorAll('[data-l4]').forEach(el => {
       const name = el.getAttribute('data-l4'), v = el.value.replace(/\D/g, '').slice(-4);
@@ -4441,7 +4646,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 110';
+  const BUILD = '2026-11-18 · 111';
 
   /* =============================================================
      KEEPING THE DATA
@@ -4503,7 +4708,7 @@ tailwind.config = {
       const col = lim > 0 ? (pct >= 70 ? '#E2614A' : pct >= 30 ? '#D79A2B' : '#35C08A') : '#93A1AE';
       return `<div class="rounded-xl border border-line p-2.5">
         <div class="flex items-center gap-2 mb-2">
-          ${acctTile(n, 30, 14, '.5rem')}
+          <button data-lookedit="${esc(n)}" aria-label="Change ${esc(n)} look" class="active:opacity-60">${acctTile(n, 30, 14, '.5rem')}</button>
           <span class="text-[14px] font-medium truncate flex-1">${esc(n)}</span>
           ${lim > 0 ? `<span class="num text-[12px] shrink-0" style="color:${col}">${Math.round(pct)}% used</span>` : ''}
 <button data-moveacct="${esc(n)}" data-step="-1" aria-label="Move ${esc(n)} up" class="shrink-0 w-8 h-8 -my-1 grid place-items-center rounded-full text-muted active:bg-line">
@@ -4520,8 +4725,11 @@ tailwind.config = {
         <div class="flex gap-2">
           <input class="cell num text-[14px]" type="number" inputmode="decimal" step="0.01" placeholder="${isBank ? 'Balance' : 'Owed'}" value="${bd.start ? cents(bd.start) : ''}" data-bal="${esc(n)}" aria-label="${esc(n)} balance">
           ${isBank ? '' : `<input class="cell num text-[14px]" type="number" inputmode="decimal" step="1" placeholder="Limit" value="${lim ? lim : ''}" data-lim="${esc(n)}" aria-label="${esc(n)} credit limit">`}
-          ${isBank ? '' : `<input class="cell num text-[14px] w-[86px] shrink-0" type="text" inputmode="numeric" maxlength="4" placeholder="Last 4" value="${esc(last4(n))}" data-l4="${esc(n)}" aria-label="${esc(n)} last 4 digits">`}
         </div>
+        ${isBank ? '' : `<div class="flex gap-2 mt-2">
+          <input class="cell num text-[14px]" type="text" inputmode="numeric" maxlength="4" placeholder="Last 4 digits" value="${esc(last4(n))}" data-l4="${esc(n)}" aria-label="${esc(n)} last 4 digits">
+          <input class="cell num text-[14px]" type="number" inputmode="decimal" step="0.01" placeholder="Minimum payment" value="${Number(info.minPay) || ''}" data-minp="${esc(n)}" aria-label="${esc(n)} minimum payment">
+        </div>`}
         ${isBank ? '' : `<div class="flex items-center gap-2 mt-2">
           <span class="text-[12px] text-muted shrink-0">due</span>
           <input class="cell num text-[13px]" type="date" value="${esc(dueValue(info))}" data-due="${esc(n)}" aria-label="${esc(n)} payment due date">
@@ -4603,21 +4811,6 @@ tailwind.config = {
       toast(moved ? `${n} deleted · ${moved} moved to ${to}` : `${n} deleted`);
     }
   });
-
-  // Paying a card is one movement with two ends. Logging it here writes the
-  // transaction, so the card and the account it came from both move.
-  function renderPayPickers() {
-    const all = sortAccts(Array.from(new Set(
-      Object.keys(accounts).concat(transactions.map(t => t.acct || 'Unassigned'))
-    )).filter(n => n && n !== 'Unassigned'));
-    const cards = all.filter(n => acctIcon(n) !== 'bank' && acctIcon(n) !== 'vault');
-    const banks = all.filter(n => acctIcon(n) === 'bank' || acctIcon(n) === 'vault');
-    const keepCard = $('payCard').value, keepFrom = $('payFrom').value;
-    $('payCard').innerHTML = cards.map(c => `<option value="${esc(c)}"${c === keepCard ? ' selected' : ''}>${esc(c)}</option>`).join('')
-      || '<option value="">No cards yet</option>';
-    $('payFrom').innerHTML = (banks.length ? banks : all).map(b => `<option value="${esc(b)}"${b === keepFrom ? ' selected' : ''}>from ${esc(b)}</option>`).join('')
-      || '<option value="">No account yet</option>';
-  }
 
   function renderLearned() {
     const keys = Object.keys(catMap).sort();
