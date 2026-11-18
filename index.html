@@ -395,6 +395,13 @@ tailwind.config = {
   <div class="safe-b shrink-0"></div>
 </div>
 
+<!-- ============ ADD / PAY FLOW SHEET ============ -->
+<div id="addSheet" data-open="false" class="sheet fixed inset-x-0 bottom-0 z-40 bg-card rounded-t-3xl border-t border-line max-h-[92vh] flex flex-col">
+  <div class="grab shrink-0 pt-3 pb-2 flex justify-center touch-none cursor-grab" role="button" aria-label="Close"><span class="block w-11 h-[5px] rounded-full bg-white/30"></span></div>
+  <div id="addBody" class="flex-1 overflow-y-auto hide-scroll px-5 pb-6"></div>
+  <div class="safe-b shrink-0"></div>
+</div>
+
 <!-- ============ ACCOUNT DETAIL SHEET ============ -->
 <div id="acctSheet" data-open="false" class="sheet fixed inset-x-0 bottom-0 z-40 bg-card rounded-t-3xl border-t border-line h-[88vh] flex flex-col">
   <div class="grab shrink-0 pt-3 pb-2 flex justify-center touch-none cursor-grab" role="button" aria-label="Close"><span class="block w-11 h-[5px] rounded-full bg-white/30"></span></div>
@@ -1951,6 +1958,7 @@ tailwind.config = {
           <select class="cell text-[14px]" data-i="${i}" data-f="acct" aria-label="Card or account">${optionsHtml(knownAccounts(), r.acct || 'Unassigned')}</select>
         </div>
         ${flags.length ? `<p class="text-[12px] mt-1.5 px-0.5">${flags.join(' · ')}</p>` : ''}
+        ${payAskHtml(r, i)}
       </div>`;
     }).join('');
     box.scrollTop = keepScroll;      // changing a dropdown should not jump you to the top
@@ -3430,12 +3438,226 @@ tailwind.config = {
   }
 
   /* =============================================================
+     ADD / PAY FLOW
+     One button for everything. A card payment is picked, priced and
+     confirmed on screen before anything saves, and it can be undone.
+  ============================================================= */
+  function last4(n) { const v = String((accounts[n] || {}).last4 || '').replace(/\D/g, '').slice(-4); return v.length === 4 ? v : ''; }
+  function l4Tag(n) { const v = last4(n); return v ? ` <span class="text-muted font-normal">•• ${v}</span>` : ''; }
+  function cardList() {
+    return sortAccts(Object.keys(accounts).filter(n => n && n !== 'Unassigned' && isCardAcct(n)));
+  }
+  function bankList() {
+    const set = new Set(Object.keys(accounts).filter(n => n && n !== 'Unassigned' && !isCardAcct(n)));
+    if (settings.primaryAcct && !isCardAcct(settings.primaryAcct)) set.add(settings.primaryAcct);
+    return sortAccts([...set]);
+  }
+  function defaultFrom() {
+    const b = bankList();
+    return b.includes(settings.primaryAcct) ? settings.primaryAcct : (b[0] || '');
+  }
+  // Cards that a vague bank line ("CAPITAL ONE MOBILE PMT") could be paying.
+  function payCandidates(desc) {
+    const d = String(desc || '').toLowerCase();
+    return cardList().filter(n => {
+      const w = n.toLowerCase().replace(/\b(card|credit)\b/g, '').trim().split(/\s+/);
+      const issuer = w.slice(0, w[0] === 'capital' ? 2 : 1).join(' ');
+      return (issuer && d.includes(issuer)) || (/\bamex|american express\b/.test(d) && /amex|american express/i.test(n));
+    });
+  }
+  function payAskHtml(r, i) {
+    if (r.dir !== 'xfer') return '';
+    const acct = r.acct || pasteForAcct || '';
+    if (acct && isCardAcct(acct)) return '';
+    const named = cardList().find(n => String(r.desc || '').toLowerCase().includes(n.toLowerCase()));
+    if (named && !r.payTo) return '';
+    const cands = payCandidates(r.desc);
+    if (!cands.length && !r.payTo) return '';
+    const opts = (cands.length ? cands : cardList());
+    const chip = (val, label, on) => `<button data-payto="${esc(val)}" data-i="${i}" class="h-9 px-3 rounded-lg text-[13px] font-semibold border ${on ? 'border-ledger bg-ledger/15 text-ink' : 'border-line bg-page text-ink'} active:opacity-70">${label}</button>`;
+    return `<div class="mt-2 rounded-xl p-2.5" style="background:#1B2B3C;border:1px solid #2F4A66">
+      <p class="text-[13px] font-semibold">${r.payTo ? 'Card payment' : 'Was this a card payment?'}</p>
+      <div class="flex flex-wrap gap-1.5 mt-2">
+        ${opts.map(n => chip(n, esc(n.replace(/^capital one\s+/i, '')) + (last4(n) ? ' ••' + last4(n) : ''), r.payTo === n)).join('')}
+        ${chip('none', 'Something else', r.payTo === 'none')}
+      </div></div>`;
+  }
+
+  let addState = null;               // where the user is in the Add flow
+  let lastAdded = null;              // ids saved by the last flow, for Undo
+  function openAdd() { addState = { step: 'menu' }; renderAdd(); openSheet($('addSheet')); }
+  function addGo(patch) { Object.assign(addState, patch); renderAdd(); $('addBody').scrollTop = 0; }
+
+  const AOPT = (key, emoji, label, sub, on) => `
+    <button data-add="${key}" class="w-full flex items-center gap-3.5 rounded-2xl border ${on ? 'border-ledger bg-ledger/10' : 'border-line bg-page/40'} px-4 py-3.5 mt-2.5 text-left active:opacity-70">
+      <span class="text-[28px] w-9 text-center" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">${emoji}</span>
+      <span class="flex-1 min-w-0"><span class="block text-[17px] font-semibold">${label}</span>${sub ? `<span class="block text-[13px] text-muted mt-0.5">${sub}</span>` : ''}</span>
+      <span class="text-muted text-xl">›</span></button>`;
+  const ABACK = to => `<button data-addback="${to}" class="text-muted text-[15px] mb-1 active:opacity-60">‹ Back</button>`;
+  const AH = (t, sub) => `<h2 class="text-[24px] font-bold tracking-tight">${t}</h2>${sub ? `<p class="text-muted text-[14px] mt-1">${sub}</p>` : ''}`;
+  const ABTN = (key, label, ghost) => `<button data-add="${key}" class="w-full h-[54px] mt-4 rounded-2xl font-bold text-[17px] ${ghost ? 'bg-page border border-line' : 'brand-grad text-white'} active:opacity-80">${label}</button>`;
+
+  // What both balances read now, and after the entries are added.
+  function previewBalances(rows) {
+    const names = [...new Set(rows.flatMap(r => [r.acct, r.payTo]).filter(Boolean))];
+    const before = {}; names.forEach(n => before[n] = balanceDetail(n).now);
+    const n0 = transactions.length;
+    rows.forEach(r => transactions.push(Object.assign({ at: Date.now() + 1 }, r)));
+    const after = {}; names.forEach(n => after[n] = balanceDetail(n).now);
+    transactions.length = n0;
+    return names.map(n => ({ name: n, before: before[n], after: after[n], card: isCardAcct(n) }));
+  }
+
+  function buildRows() {
+    const st = addState, amt = Math.round(Math.abs(Number(st.amount) || 0) * 100) / 100, date = st.date || todayISO();
+    if (st.kind === 'card') return [{ id: uid(), date, desc: 'Payment to ' + st.card, payTo: st.card, cat: 'Transfer', acct: st.from, xfer: true, amount: amt }];
+    if (st.kind === 'acct') {
+      const pair = uid();
+      return [{ id: uid(), pair, date, desc: 'To ' + st.to, cat: 'Transfer', acct: st.from, xfer: true, amount: amt },
+              { id: uid(), pair, date, desc: 'From ' + st.from, cat: 'Transfer', acct: st.to, xfer: true, amount: -amt }];
+    }
+    if (st.kind === 'person') return [{ id: uid(), date, desc: (st.app || 'Zelle') + ' to ' + (st.to || 'someone'), cat: 'P2P Transfers', acct: st.from, xfer: false, amount: amt }];
+    // loan or bill: money that leaves you
+    const nm = (st.to || 'Bill').trim();
+    return [{ id: uid(), date, desc: nm, cat: rememberedCat(nm) || 'Debt & Fees', acct: st.from, xfer: false, amount: amt }];
+  }
+
+  function fromAndDate() {
+    const st = addState;
+    return `
+      <label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5">
+        <span class="text-muted text-[15px]">From</span>
+        <select data-addf="from" class="bg-transparent text-right text-[15px] font-medium outline-none">${bankList().map(n => `<option ${n === st.from ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
+      <label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5">
+        <span class="text-muted text-[15px]">Date</span>
+        <input data-addf="date" type="date" value="${esc(st.date || todayISO())}" max="${todayISO()}" class="bg-transparent text-right text-[15px] font-medium outline-none"></label>`;
+  }
+
+  function renderAdd() {
+    const st = addState, box = $('addBody');
+    let h = '';
+    if (st.step === 'menu') {
+      h = AH('Add') +
+        AOPT('spent', '🛍️', 'Spent') + AOPT('gotpaid', '💵', 'Got paid') + AOPT('paid', '💳', 'Paid a card or bill') +
+        `<button data-add="paste" class="w-full h-[52px] mt-4 rounded-2xl bg-page border border-line font-semibold text-[16px] active:opacity-70">📋&nbsp; Paste</button>`;
+    } else if (st.step === 'paidwhat') {
+      h = ABACK('menu') + AH('Paid what?') +
+        AOPT('k-card', '💳', 'Credit card') + AOPT('k-loan', '🧾', 'Loan or bill') +
+        (bankList().length > 1 ? AOPT('k-acct', '🔄', 'My other account') : '') + AOPT('k-person', '💸', 'A person');
+    } else if (st.step === 'card') {
+      const cards = cardList();
+      const due = n => { const dt = nextDue(accounts[n] || {}); return dt ? dt.getTime() : Infinity; };
+      cards.sort((a, b) => (duePaidBy(a) ? 1 : 0) - (duePaidBy(b) ? 1 : 0) || due(a) - due(b));
+      h = ABACK('paidwhat') + AH('Which card?') + (cards.length ? cards.map(n => {
+        const owed = balanceDetail(n).now, dt = nextDue(accounts[n] || {});
+        const sub = (last4(n) ? '•• ' + last4(n) + ' · ' : '') + (duePaidBy(n) ? '<span style="color:#6FD3A8">✓ Paid this cycle</span>' : dt ? `<span style="color:${dueColor(dt)}">${esc(dueLabel(dt))}</span>` : 'No due date set');
+        return `<button data-pickcard="${esc(n)}" class="w-full flex items-center gap-3 rounded-2xl border border-line bg-page/40 px-3.5 py-3 mt-2.5 text-left active:opacity-70">
+          ${acctTile(n, 44, 19, '.7rem')}
+          <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted mt-0.5">${sub}</span></span>
+          <span class="text-right"><span class="num block text-[16px] font-bold">${money(owed)}</span><span class="block text-[12px] text-muted">owed</span></span></button>`;
+      }).join('') : `<p class="text-muted text-[15px] mt-4">No cards yet. Add one in the Cards tab first.</p>`);
+    } else if (st.step === 'amount') {
+      const owed = Math.max(balanceDetail(st.card).now, 0), minP = Number((accounts[st.card] || {}).minPay) || 0;
+      const chips = [['full', 'Full balance', owed], ['half', 'Half', Math.round(owed * 50) / 100]];
+      if (minP) chips.splice(1, 0, ['min', 'Minimum', minP]);
+      const chip = (k, l, v) => `<button data-amtpick="${k}" data-v="${v}" class="rounded-2xl border ${st.pick === k ? 'border-ledger bg-ledger/10' : 'border-line bg-page/40'} px-3.5 py-3 text-left active:opacity-70"><span class="block text-[16px] font-semibold">${l}</span><span class="num block text-[13px] text-muted">${money(v)}</span></button>`;
+      h = ABACK('card') + AH(esc(st.card.replace(/^capital one\s+/i, '')), 'How much?') +
+        `<div class="flex items-center justify-center mt-4"><span class="text-[40px] font-bold text-muted">$</span><input data-addf="amount" type="number" inputmode="decimal" step="0.01" value="${st.amount || ''}" placeholder="0.00" class="num bg-transparent text-left text-[44px] font-bold outline-none" style="width:${Math.max(4, String(st.amount || '0.00').length) * 0.62 + 0.4}em"></div>
+         <div class="grid grid-cols-2 gap-2.5 mt-2">${chips.map(c => chip(...c)).join('')}<button data-amtpick="other" class="rounded-2xl border ${st.pick === 'other' ? 'border-ledger bg-ledger/10' : 'border-line bg-page/40'} px-3.5 py-3 text-left active:opacity-70"><span class="block text-[16px] font-semibold">Other</span><span class="block text-[13px] text-muted">Type an amount</span></button></div>` +
+        fromAndDate() + ABTN('review', 'Review payment');
+    } else if (st.step === 'other') {
+      const title = { loan: 'Loan or bill', acct: 'My other account', person: 'A person' }[st.kind];
+      const toField = st.kind === 'acct'
+        ? `<select data-addf="to" class="bg-transparent text-right text-[15px] font-medium outline-none">${bankList().filter(n => n !== st.from).map(n => `<option ${n === st.to ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`
+        : `<input data-addf="to" value="${esc(st.to || '')}" placeholder="${st.kind === 'person' ? 'Name' : 'Car loan, SSFCU LOC…'}" class="bg-transparent text-right text-[15px] font-medium outline-none w-[60%]">`;
+      h = ABACK('paidwhat') + AH(title) +
+        `<div class="flex items-center justify-center mt-4"><span class="text-[40px] font-bold text-muted">$</span><input data-addf="amount" type="number" inputmode="decimal" step="0.01" value="${st.amount || ''}" placeholder="0.00" class="num bg-transparent text-left text-[44px] font-bold outline-none" style="width:${Math.max(4, String(st.amount || '0.00').length) * 0.62 + 0.4}em"></div>
+         <label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5"><span class="text-muted text-[15px]">To</span>${toField}</label>` +
+        (st.kind === 'person' ? `<label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5"><span class="text-muted text-[15px]">With</span>
+          <select data-addf="app" class="bg-transparent text-right text-[15px] font-medium outline-none">${['Zelle', 'Venmo', 'Cash App', 'PayPal', 'Cash'].map(a => `<option ${a === st.app ? 'selected' : ''}>${a}</option>`).join('')}</select></label>` : '') +
+        fromAndDate() + ABTN('review', 'Review');
+    } else if (st.step === 'review') {
+      const rows = buildRows(), pv = previewBalances(rows), amt = Math.abs(rows[0].amount);
+      const back = st.kind === 'card' ? 'amount' : 'other';
+      const spendNote = rows[0].xfer ? 'Not affected' : `${money(amt)} · ${esc(rows[0].cat)}`;
+      h = ABACK(back) + AH('Look right?', 'Here’s what changes when you tap Done.') +
+        `<div class="rounded-2xl border border-line bg-page/40 px-4 mt-4">${pv.map(p => `
+          <div class="flex items-center gap-3 py-3.5 border-b border-line last:border-0">
+            ${acctTile(p.name, 38, 17, '.6rem')}
+            <span class="flex-1 min-w-0"><span class="block text-[15px] font-semibold truncate">${esc(p.name)}</span><span class="block text-[12px] text-muted">${p.card ? 'owed' : 'balance'}</span></span>
+            <span class="text-right"><span class="num block text-[13px] text-muted line-through">${money(p.before)}</span><span class="num block text-[19px] font-bold" style="${p.card && p.after <= 0.004 ? 'color:#35C08A' : ''}">${money(p.after)}</span></span>
+          </div>`).join('')}</div>
+        <div class="flex justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px]"><span class="text-muted">Your spending</span><span>${spendNote}</span></div>
+        <div class="flex justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px]"><span class="text-muted">Date</span><span>${esc(dayLabel(rows[0].date))}</span></div>` +
+        ABTN('save', 'Done');
+    } else if (st.step === 'done') {
+      h = `<div class="text-center pt-8">
+          <div class="mx-auto w-20 h-20 rounded-full grid place-items-center text-[38px]" style="background:#16261F;border:2px solid #35C08A;color:#35C08A">✓</div>
+          <h2 class="text-[23px] font-bold mt-5">${esc(st.doneTitle)}</h2><p class="text-muted text-[15px] mt-1">${esc(st.doneSub)}</p></div>` +
+        ABTN('undo', 'Undo', true) + ABTN('close', 'Done');
+    }
+    box.innerHTML = h;
+  }
+
+  $('addSheet').addEventListener('input', function (e) {
+    const f = e.target.getAttribute && e.target.getAttribute('data-addf');
+    if (!f || !addState) return;
+    addState[f] = e.target.value;
+    if (f === 'amount') { addState.pick = 'other'; this.querySelectorAll('[data-amtpick]').forEach(b => { const on = b.getAttribute('data-amtpick') === 'other'; b.classList.toggle('border-ledger', on); b.classList.toggle('bg-ledger/10', on); b.classList.toggle('border-line', !on); b.classList.toggle('bg-page/40', !on); }); }
+  });
+  $('addSheet').addEventListener('change', function (e) {
+    const f = e.target.getAttribute && e.target.getAttribute('data-addf');
+    if (f && addState) addState[f] = e.target.value;
+  });
+  $('addSheet').addEventListener('click', function (e) {
+    const st = addState; if (!st) return;
+    const back = e.target.closest('[data-addback]');
+    if (back) { addGo({ step: back.getAttribute('data-addback') }); return; }
+    const pc = e.target.closest('[data-pickcard]');
+    if (pc) { const card = pc.getAttribute('data-pickcard'); const owed = Math.max(balanceDetail(card).now, 0);
+      addGo({ step: 'amount', card, amount: owed ? owed.toFixed(2) : '', pick: owed ? 'full' : 'other', from: st.from || defaultFrom(), date: st.date || todayISO() }); return; }
+    const ap = e.target.closest('[data-amtpick]');
+    if (ap) { const k = ap.getAttribute('data-amtpick'); addGo({ pick: k, amount: k === 'other' ? '' : Number(ap.getAttribute('data-v')).toFixed(2) });
+      if (k === 'other') setTimeout(() => { const i = $('addBody').querySelector('[data-addf="amount"]'); if (i) i.focus(); }, 50); return; }
+    const b = e.target.closest('[data-add]'); if (!b) return;
+    const k = b.getAttribute('data-add');
+    if (k === 'spent' || k === 'gotpaid') {
+      closeSheets(); openPasteSheet();
+      setTimeout(() => { $('logOneBtn').onclick(); if (k === 'gotpaid' && draft.length) { draft[draft.length - 1].dir = 'in'; draft[draft.length - 1].cat = 'Income'; renderReview(); } }, 30);
+    } else if (k === 'paste') { closeSheets(); openPasteSheet(); }
+    else if (k === 'paid') addGo({ step: 'paidwhat' });
+    else if (k === 'k-card') addGo({ step: 'card', kind: 'card', from: defaultFrom() });
+    else if (k.startsWith('k-')) { const kind = k.slice(2), from = defaultFrom();
+      addGo({ step: 'other', kind, from, to: kind === 'acct' ? (bankList().find(n => n !== from) || '') : '', app: 'Zelle', amount: '', date: todayISO() }); }
+    else if (k === 'review') {
+      if (!(Math.abs(Number(st.amount)) > 0)) { toast('Enter an amount'); return; }
+      if (!st.from) { toast('Pick the account it came from'); return; }
+      if (st.kind === 'acct' && (!st.to || st.to === st.from)) { toast('Pick a different account'); return; }
+      addGo({ step: 'review' });
+    } else if (k === 'save') {
+      const rows = buildRows().map(r => Object.assign({ at: Date.now() }, r));
+      transactions = transactions.concat(rows);
+      lastAdded = rows.map(r => r.id);
+      save(); render(); renderAcctSheet(); renderBalances();
+      const amt = money(Math.abs(rows[0].amount));
+      const owedAfter = st.kind === 'card' ? balanceDetail(st.card).now : null;
+      addGo({ step: 'done',
+        doneTitle: st.kind === 'card' ? (owedAfter <= 0.004 ? st.card + ' paid off' : 'Payment recorded') : 'Saved',
+        doneSub: st.kind === 'card' ? amt + ' from ' + st.from : amt + ' · ' + rows[0].desc });
+    } else if (k === 'undo') {
+      if (lastAdded) { const ids = new Set(lastAdded); transactions = transactions.filter(t => !ids.has(t.id)); lastAdded = null; save(); render(); renderAcctSheet(); renderBalances(); toast('Undone'); }
+      closeSheets();
+    } else if (k === 'close') closeSheets();
+  });
+
+  /* =============================================================
      SHEETS, TOAST
   ============================================================= */
   function openSheet(el) { if (el.id === 'pasteSheet' && typeof paintClear === 'function') setTimeout(paintClear, 0); el.dataset.open = 'true'; $('scrim').classList.remove('opacity-0', 'pointer-events-none'); document.body.style.overflow = 'hidden'; }
   function closeSheets() {
     $('pasteSheet').dataset.open = 'false'; $('dataSheet').dataset.open = 'false'; $('catSheet').dataset.open = 'false'; $('acctSheet').dataset.open = 'false'; $('editSheet').dataset.open = 'false';
     $('flowSheet').dataset.open = 'false'; flowDetail = null;
+    if ($('addSheet')) $('addSheet').dataset.open = 'false';
     $('reviewSheet').dataset.open = 'false';
     $('monthSheet').dataset.open = 'false';
     catDetail = null; acctDetail = null; editId = null; monthDetail = null;
@@ -3473,7 +3695,7 @@ tailwind.config = {
         .then(() => toast('Copied. Paste it into Claude'), () => toast('Couldn\u2019t copy. Try again'));
     }
   });
-  $('nudgeAdd').onclick = () => { $('openPaste').click(); };
+  $('nudgeAdd').onclick = () => { openPasteSheet(); };
   $('nudgeLater').onclick = () => { try { localStorage.setItem(NUDGE_KEY, todayISO()); } catch (e) {} renderNudge(); };
 
   /* ⋯ menu in the header */
@@ -3493,7 +3715,7 @@ tailwind.config = {
     const k = b.getAttribute('data-menu');
     if (k === 'review') { openReview(); return; }
     if (k === 'search') { showTab('activity'); setTimeout(() => $('txSearch').focus(), 60); }
-    else if (k === 'logone') { $('openPaste').click(); setTimeout(() => $('logOneBtn').click(), 30); }
+    else if (k === 'logone') { openPasteSheet(); setTimeout(() => $('logOneBtn').click(), 30); }
     else if (k === 'backup') $('exportBtn').click();
     else if (k === 'restore') $('importBtn').click();
     else if (k === 'settings') $('openData').click();
@@ -3542,7 +3764,8 @@ tailwind.config = {
   $('nextMonth').onclick = () => { viewMonth = shiftMonth(viewMonth, 1); render(); syncBudgetField(); renderCatSheet(); renderAcctSheet(); };
   $('toggleSort').onclick = function () { sortDesc = !sortDesc; this.textContent = sortDesc ? 'Newest first' : 'Oldest first'; render(); };
 
-  $('openPaste').onclick = () => { pasteForAcct = null; $('pasteMsg').classList.add('hidden'); showStep(1); refreshCatOptions(); openSheet($('pasteSheet')); setTimeout(() => $('bulkInput').focus(), 250); };
+  function openPasteSheet() { pasteForAcct = null; $('pasteMsg').classList.add('hidden'); showStep(1); refreshCatOptions(); openSheet($('pasteSheet')); setTimeout(() => $('bulkInput').focus(), 250); }
+  $('openPaste').onclick = () => openAdd();
   $('openData').onclick = () => { $('setMsg').classList.add('hidden'); syncBudgetField(); openSheet($('dataSheet')); };
   $('editIncome').onclick = () => { $('setMsg').classList.add('hidden'); syncBudgetField(); openSheet($('dataSheet')); setTimeout(() => { $('incomeInput').focus(); $('incomeInput').scrollIntoView({ block: 'center' }); }, 250); };
 
@@ -3897,6 +4120,8 @@ tailwind.config = {
     }
   });
   $('reviewList').addEventListener('click', function (e) {
+    const pa = e.target.closest('[data-payto]');
+    if (pa) { const r = draft[+pa.getAttribute('data-i')]; if (r) { r.payTo = pa.getAttribute('data-payto'); renderReview(); } return; }
     if (e.target.closest('[data-adddupes]')) {
       draft = draft.concat(draftDupes);
       draftDupes = [];
@@ -3931,7 +4156,9 @@ tailwind.config = {
       }
       let acct = resolveAcct(titleCaseAcct(r.acct));
       if (acct === 'Unassigned' && settings.primaryAcct) acct = settings.primaryAcct;
-      return { id: r.id, at: Date.now(), date: r.date, desc: (r.desc || '').trim() || 'Untitled', cat: cat, acct: acct, xfer: r.dir === 'xfer', amount: r.dir === 'in' ? -r.amount : r.amount };
+      const out = { id: r.id, at: Date.now(), date: r.date, desc: (r.desc || '').trim() || 'Untitled', cat: cat, acct: acct, xfer: r.dir === 'xfer', amount: r.dir === 'in' ? -r.amount : r.amount };
+      if (r.dir === 'xfer' && r.payTo && r.payTo !== 'none') out.payTo = r.payTo;
+      return out;
     });
     if (!clean.length) { toast('Every row has a zero amount'); return; }
 
@@ -4174,6 +4401,11 @@ tailwind.config = {
         delete accounts[name].dueDate; delete accounts[name].dueDay;
       }
     });
+    $('balancesList').querySelectorAll('[data-l4]').forEach(el => {
+      const name = el.getAttribute('data-l4'), v = el.value.replace(/\D/g, '').slice(-4);
+      const info = accounts[name] || (accounts[name] = {});
+      if ((info.last4 || '') !== v) { if (v) info.last4 = v; else delete info.last4; }
+    });
     $('balancesList').querySelectorAll('[data-lim]').forEach(el => {
       const name = el.getAttribute('data-lim');
       const v = parseFloat(el.value);
@@ -4209,7 +4441,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-14 · 109';
+  const BUILD = '2026-11-18 · 110';
 
   /* =============================================================
      KEEPING THE DATA
@@ -4288,6 +4520,7 @@ tailwind.config = {
         <div class="flex gap-2">
           <input class="cell num text-[14px]" type="number" inputmode="decimal" step="0.01" placeholder="${isBank ? 'Balance' : 'Owed'}" value="${bd.start ? cents(bd.start) : ''}" data-bal="${esc(n)}" aria-label="${esc(n)} balance">
           ${isBank ? '' : `<input class="cell num text-[14px]" type="number" inputmode="decimal" step="1" placeholder="Limit" value="${lim ? lim : ''}" data-lim="${esc(n)}" aria-label="${esc(n)} credit limit">`}
+          ${isBank ? '' : `<input class="cell num text-[14px] w-[86px] shrink-0" type="text" inputmode="numeric" maxlength="4" placeholder="Last 4" value="${esc(last4(n))}" data-l4="${esc(n)}" aria-label="${esc(n)} last 4 digits">`}
         </div>
         ${isBank ? '' : `<div class="flex items-center gap-2 mt-2">
           <span class="text-[12px] text-muted shrink-0">due</span>
