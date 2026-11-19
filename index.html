@@ -120,70 +120,71 @@ tailwind.config = {
     <button id="nudgeAdd" class="h-9 px-3 rounded-lg bg-accent text-white text-[13px] font-semibold active:opacity-80">Add</button>
     <button id="nudgeLater" aria-label="Not today" class="w-8 h-8 grid place-items-center rounded-full text-muted active:bg-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   </div>
-  <section id="homeHero" class="px-1 pt-1 pb-1">
-    <p class="text-[13px] font-semibold text-muted">Truly yours</p>
-    <p id="heroNet" class="num text-[42px] leading-tight font-bold tracking-tight">—</p>
-    <p id="heroSub" class="num text-[13px] text-muted"></p>
-    <div id="heroBar" class="hidden mt-3.5 h-3.5 rounded-full overflow-hidden flex gap-[3px]"></div>
-    <div id="heroBarLbl" class="hidden mt-1.5 justify-between text-[12px] text-muted num"></div>
+  <section id="homeHero" class="px-1 pt-2">
+    <p class="text-[15px] font-medium text-muted">Truly yours</p>
+    <p id="heroNet" class="num text-[44px] leading-[1.1] font-bold tracking-tight mt-1">—</p>
+    <p id="heroSub" class="num text-[15px] text-muted mt-1.5"></p>
+    <div id="heroBar" class="hidden mt-4 h-2 rounded-full overflow-hidden flex"></div>
+    <div id="heroBarLbl" class="hidden"></div>
   </section>
-  <button id="reviewCard" class="mt-3 w-full text-left rounded-2xl border border-line bg-card px-4 py-3.5 flex items-center gap-3 active:bg-line">
-    <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:#173A2F;color:#35C08A">
+  <section id="homeMonth" class="mt-5 bg-card rounded-[20px] border border-line p-[18px]"></section>
+  <button id="reviewCard" class="mt-3 w-full text-left rounded-[20px] border border-line bg-card px-4 py-3.5 flex items-center gap-3 active:bg-line">
+    <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:#2A2316;color:#E8A54B">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"/></svg>
     </span>
-    <span class="flex-1 min-w-0"><span id="reviewCardTitle" class="block text-[15px] font-semibold">Review last month</span><span class="block text-[13px] text-muted">Where to save to get back in the green</span></span>
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93A1AE" stroke-width="2.2" stroke-linecap="round"><path d="m9 6 6 6-6 6"/></svg>
+    <span class="flex-1 min-w-0"><span id="reviewCardTitle" class="block text-[16px] font-semibold">Review last month</span><span class="block text-[13px] text-muted">Where to save to get back in the green</span></span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2.6" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
   </button>
-<section class="mt-4">
-    <h2 class="text-[15px] font-bold tracking-tight px-1 mb-2 flex items-center gap-1.5"><span id="acctHeadIcon"></span>By card and account</h2>
-    <div id="acctList" class="bg-card rounded-2xl border border-line divide-y divide-line overflow-hidden"></div>
+  <section id="homeCardsSec" class="mt-6">
+    <div class="flex items-center justify-between px-1 mb-2.5"><h2 class="text-[20px] font-bold tracking-tight">Cards</h2><span id="cardsBadge"></span></div>
+    <div id="acctList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
   </section>
-  <section class="mt-3 grid grid-cols-2 gap-2.5">
-    <button data-flow="in" class="text-left bg-card rounded-2xl border border-line px-3.5 py-3 active:bg-line transition-colors"><span class="flex items-center justify-between text-[12px] text-muted">In this month<span class="opacity-60"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></span><span id="homeIn" class="block num text-[19px] font-bold mt-0.5" style="color:#35C08A">$0.00</span></button>
-    <button data-flow="out" class="text-left bg-card rounded-2xl border border-line px-3.5 py-3 active:bg-line transition-colors"><span class="flex items-center justify-between text-[12px] text-muted">Spent this month<span class="opacity-60"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></span><span id="homeSpent" class="block num text-[19px] font-bold mt-0.5" style="color:#E9EEF3">$0.00</span></button>
+  <section id="homeCashSec" class="mt-6">
+    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5">Cash</h2>
+    <div id="cashList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
   </section>
-  <section class="mt-4 bg-card rounded-2xl border border-line p-5">
-    <div class="flex items-end justify-between gap-4">
-      <div>
-        <p class="text-[14px] text-muted flex items-center gap-1.5"><span id="leftIcon"></span>Left after everything</p>
-        <p id="leftBig" class="num text-[30px] leading-none font-semibold tracking-tight mt-1.5">$0.00</p>
-      </div>
-      <button id="editIncome" class="text-right active:opacity-60">
-        <p class="text-[14px] text-muted">Monthly income</p>
-        <p id="incomeBig" class="num text-[20px] font-semibold leading-tight mt-1.5 underline decoration-line decoration-2 underline-offset-4">Set</p>
-      </button>
-    </div>
-    <div class="mt-4 pt-4 border-t border-line space-y-2.5 text-[15px]">
-      <div class="flex justify-between"><span class="text-muted">Income you expect</span><span id="rowIncome" class="num font-semibold">$0.00</span></div>
-      <div id="rowDepositWrap" class="hidden justify-between"><span class="text-muted">Deposits you pasted</span><span id="rowDeposit" class="num font-semibold text-income">$0.00</span></div>
-      <div class="flex justify-between"><span class="text-muted">Spent</span><span id="rowSpent" class="num font-semibold">$0.00</span></div>
-      <div id="rowMovedWrap" class="hidden justify-between"><span class="text-muted">Card payments &amp; transfers</span><span id="rowMoved" class="num font-semibold text-muted">$0.00</span></div>
-      <div id="rowBankWrap" class="hidden justify-between pt-3 mt-1.5 border-t border-line"><span id="rowBankLabel" class="font-medium">In the bank</span><span id="rowBank" class="num font-semibold">$0.00</span></div>
-      <div id="rowOwedWrap" class="hidden justify-between"><span class="text-muted">Owed on cards</span><span id="rowOwed" class="num font-semibold text-over">$0.00</span></div>
-      <div id="rowNetWrap" class="hidden justify-between pt-3 mt-1.5 border-t border-line"><span class="text-[16px] font-semibold">Truly yours</span><span id="rowNet" class="num text-[17px] font-semibold">$0.00</span></div>
-    </div>
+  <section id="homeRecentSec" class="mt-6">
+    <div class="flex items-baseline justify-between px-1 mb-2.5"><h2 class="text-[20px] font-bold tracking-tight">Recent</h2><button id="seeAllTx" class="text-[15px] font-medium active:opacity-60" style="color:#6FB0EE">See all</button></div>
+    <div id="recentList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
   </section>
+  <!-- Older Home pieces. Hidden; kept so the maths that fills them keeps running. -->
+  <div class="hidden" aria-hidden="true">
+    <span id="acctHeadIcon"></span><span id="homeIn"></span><span id="homeSpent"></span><span id="leftIcon"></span><p id="leftBig"></p>
+    <button id="editIncome" tabindex="-1"><p id="incomeBig"></p></button>
+    <span id="rowIncome"></span><div id="rowDepositWrap"><span id="rowDeposit"></span></div><span id="rowSpent"></span>
+    <div id="rowMovedWrap"><span id="rowMoved"></span></div><div id="rowBankWrap"><span id="rowBankLabel"></span><span id="rowBank"></span></div>
+    <div id="rowOwedWrap"><span id="rowOwed"></span></div><div id="rowNetWrap"><span id="rowNet"></span></div>
+  </div>
 </div>
 
 <div id="panel-activity" class="hidden">
-  <section>
-    <label class="flex items-center gap-2.5 h-12 rounded-2xl bg-card border border-line px-3.5 text-muted">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="txSearch" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search merchant, category, amount" aria-label="Search transactions" class="flex-1 bg-transparent text-ink outline-none placeholder:text-muted">
+  <section class="flex gap-2">
+    <label class="flex-1 min-w-0 flex items-center gap-2.5 h-12 rounded-2xl bg-card border border-line px-3.5 text-muted">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="txSearch" type="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Search" aria-label="Search transactions" class="flex-1 min-w-0 bg-transparent text-ink outline-none placeholder:text-muted">
     </label>
+    <button id="filterBtn" aria-label="Filter by card or account" aria-expanded="false" class="relative w-12 h-12 shrink-0 rounded-2xl bg-card border border-line grid place-items-center active:bg-line">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      <span id="filterDot" class="hidden absolute top-2.5 right-2.5 w-2 h-2 rounded-full" style="background:#6FB0EE"></span>
+    </button>
   </section>
-  <section class="mt-3 grid grid-cols-3 gap-2.5">
-    <button data-flow="out" class="text-left bg-card rounded-2xl border border-line px-3.5 py-3 active:bg-line transition-colors"><span class="flex items-center justify-between text-[12px] text-muted">Spent<span class="opacity-60"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></span><span id="actSpent" class="block num text-[19px] font-bold mt-0.5" style="color:#E9EEF3">$0.00</span></button>
-    <button data-flow="in" class="text-left bg-card rounded-2xl border border-line px-3.5 py-3 active:bg-line transition-colors"><span class="flex items-center justify-between text-[12px] text-muted">In<span class="opacity-60"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></span></span><span id="actIn" class="block num text-[19px] font-bold mt-0.5" style="color:#35C08A">$0.00</span></button>
-    <div class="bg-card rounded-2xl border border-line px-3.5 py-3"><p class="text-[12px] text-muted">Paid to cards</p><p id="actPaid" class="num text-[19px] font-bold mt-0.5" style="color:#4F93D6">$0.00</p></div>
+  <div id="acctChipsWrap" class="hidden mt-3">
+    <div id="acctChips" class="flex gap-1.5 overflow-x-auto hide-scroll -mx-1 px-1"></div>
+  </div>
+  <div id="typeChips" class="mt-3 flex gap-2 overflow-x-auto hide-scroll -mx-1 px-1"></div>
+  <section class="mt-3 bg-card rounded-[18px] border border-line px-4 py-3.5 flex items-center justify-between gap-3">
+    <button data-flow="out" class="text-left active:opacity-60"><span id="actSpentLbl" class="block text-[13px] text-muted">Spent this month</span><span id="actSpent" class="block num text-[22px] font-bold tracking-tight mt-0.5">$0.00</span></button>
+    <button data-flow="in" class="text-right active:opacity-60"><span class="block text-[13px] text-muted">Came in</span><span id="actIn" class="block num text-[17px] font-semibold mt-0.5" style="color:#3CCB8F">$0.00</span></button>
+    <span id="actPaid" class="hidden"></span>
   </section>
-  <section class="mt-4">
-    <div id="acctChips" class="flex gap-1.5 overflow-x-auto hide-scroll pb-2 -mx-1 px-1"></div>
-    <div class="flex items-center justify-between px-1 mb-2">
-      <h2 id="txHeading" class="text-[15px] font-bold tracking-tight">Transactions</h2>
+  <div id="checkBanner" class="hidden"></div>
+  <section class="mt-1">
+    <div class="flex items-center justify-between px-1 pt-4">
+      <h2 id="txHeading" class="text-[13px] font-semibold text-muted">Transactions</h2>
       <button id="toggleSort" class="text-[13px] text-muted active:opacity-60">Newest first</button>
     </div>
-    <div id="txList" class="bg-card rounded-2xl border border-line divide-y divide-line overflow-hidden"></div>
+    <div id="txList"></div>
+    <p id="swipeHint" class="hidden px-1 pt-2 text-[12px] text-muted">Swipe left on a row to edit or delete it.</p>
   </section>
   <section id="recurringSection" class="hidden mt-4">
     <div class="flex items-baseline justify-between px-1 mb-2">
@@ -197,28 +198,34 @@ tailwind.config = {
 <div id="panel-spending" class="hidden">
   <section class="mb-4">
     <div class="flex items-baseline justify-between px-1 mb-2">
-      <h2 class="text-[15px] font-bold tracking-tight">Last six months</h2>
-      <span class="text-[12px] text-muted">tap a month</span>
+      <h2 class="text-[20px] font-bold tracking-tight">By month</h2>
+      <span class="text-[13px] text-muted">tap a month</span>
     </div>
-    <div id="trendStrip" class="bg-card rounded-2xl border border-line px-3 py-3"></div>
+    <div id="trendStrip" class="bg-card rounded-[20px] border border-line px-4 pt-4 pb-3"></div>
   </section>
-  <section class="bg-card rounded-2xl border border-line p-5">
+  <section class="bg-card rounded-[20px] border border-line p-[18px]">
     <div class="flex items-end justify-between gap-4">
       <div>
-        <p class="text-[14px] text-muted">Spent</p>
-        <p id="spentBig" class="num text-[30px] leading-none font-semibold tracking-tight mt-1">$0.00</p>
+        <p id="spentLbl" class="text-[15px] text-muted">Spent</p>
+        <p id="spentBig" class="num text-[38px] leading-none font-bold tracking-tight mt-1.5">$0.00</p>
       </div>
       <button id="editBudget" class="text-right active:opacity-60">
         <p class="text-[14px] text-muted">Budget</p>
         <p id="budgetBig" class="num text-[20px] font-semibold leading-tight mt-1.5 underline decoration-line decoration-2 underline-offset-4">$0.00</p>
       </button>
     </div>
+    <button id="setBudgetRow" class="hidden mt-4 w-full rounded-2xl border border-dashed border-line px-3.5 py-3 flex items-center gap-3 text-left active:bg-line">
+      <span class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:#1A2A3B"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6FB0EE" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      <span class="flex-1"><span class="block text-[16px] font-semibold">Set a monthly budget</span><span class="block text-[13px] text-muted">One number for the whole month</span></span>
+    </button>
+    <div id="meterBox">
     <div id="meterTrack" class="mt-4 h-3 rounded-full overflow-hidden bg-page">
       <div id="meterFill" class="meter-fill h-full w-0 bg-ledger rounded-full"></div>
     </div>
     <div class="mt-3.5 flex items-baseline justify-between text-[15px]">
       <p id="meterStatus" class="font-semibold text-ledger">Set a budget to start tracking</p>
       <p id="meterPct" class="num text-muted">0%</p>
+    </div>
     </div>
     <p id="paceLine" class="hidden num text-[14px] mt-3 pt-3.5 border-t border-line"></p>
     <div id="incomeRow" class="hidden mt-4 pt-4 border-t border-line items-center justify-between text-[15px]">
@@ -227,23 +234,47 @@ tailwind.config = {
     </div>
   </section>
   <section class="mt-4">
-    <h2 class="text-[15px] font-bold tracking-tight px-1 mb-2 flex items-center gap-1.5"><span id="catHeadIcon"></span>Where it went</h2>
-    <div id="catList" class="bg-card rounded-2xl border border-line divide-y divide-line overflow-hidden"></div>
+    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5 mt-2 flex items-center gap-1.5"><span id="catHeadIcon" class="hidden"></span>Where it went</h2>
+    <div id="catList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
+    <div id="catLegend" class="mt-2.5 px-1 flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-muted"></div>
   </section>
 </div>
 
 <div id="panel-cards" class="hidden">
-  <h2 class="px-1 text-[20px] font-bold tracking-tight">Cards &amp; accounts</h2>
-  <section class="mt-3 grid grid-cols-3 gap-2">
-    <button id="cardsPay" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">💳</span><span class="block text-[14px] font-semibold mt-1">Pay a card</span></button>
-    <button id="cardsAddCard" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">➕</span><span class="block text-[14px] font-semibold mt-1">Add a card</span></button>
-    <button id="cardsAddBank" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">🏦</span><span class="block text-[14px] font-semibold mt-1">Add a bank</span></button>
+  <div class="flex items-center justify-between px-1">
+    <h2 class="text-[28px] font-bold tracking-tight">Accounts</h2>
+    <button id="acctAddBtn" aria-label="Add a card or bank" aria-expanded="false" class="w-11 h-11 rounded-full bg-card border border-line grid place-items-center active:bg-line">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+  </div>
+  <div id="acctAddMenu" class="hidden mt-3 grid grid-cols-2 gap-2.5">
+    <button id="cardsAddCard" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">💳</span><span class="block text-[15px] font-semibold mt-1">Add a card</span></button>
+    <button id="cardsAddBank" class="rounded-2xl bg-card border border-line py-3.5 active:opacity-70"><span class="block text-[24px]" style="font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">🏦</span><span class="block text-[15px] font-semibold mt-1">Add a bank</span></button>
+  </div>
+  <button id="cardsPay" class="hidden" tabindex="-1" aria-hidden="true"></button>
+  <section class="mt-3 grid grid-cols-2 gap-2.5">
+    <div class="bg-card rounded-[18px] border border-line px-4 py-3.5"><p class="text-[13px] text-muted">Cash</p><p id="accCash" class="num text-[22px] font-bold mt-1" style="color:#3CCB8F">—</p></div>
+    <div class="bg-card rounded-[18px] border border-line px-4 py-3.5"><p class="text-[13px] text-muted">Owed on cards</p><p id="accOwed" class="num text-[22px] font-bold mt-1">—</p></div>
   </section>
-  <section class="mt-3 bg-card rounded-2xl border border-line p-4">
-    <p class="text-[16px] font-bold tracking-tight mb-1">Balances, limits &amp; due dates</p>
-    <p class="text-[13px] text-muted leading-relaxed mb-3">Enter what the account said on a given day. Everything you have logged since that day is added or subtracted automatically — so setting the date back to the start of the month lets your transactions do the maths.</p>
-    <div id="balancesList" class="space-y-2.5"></div>
-    <button id="saveBalances" class="mt-3 w-full h-12 rounded-xl bg-accent text-white text-[15px] font-semibold active:opacity-80">Save balances</button>
+  <section id="accCardsSec" class="mt-6">
+    <div class="flex items-baseline justify-between px-1 mb-2.5"><h2 class="text-[20px] font-bold tracking-tight">Credit cards</h2><span id="accUtil" class="num text-[13px] text-muted"></span></div>
+    <div id="accCards" class="space-y-2.5"></div>
+  </section>
+  <section id="accBanksSec" class="mt-6">
+    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5">Banks</h2>
+    <div id="accBanks" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
+  </section>
+  <section id="balSection" class="mt-6 bg-card rounded-[20px] border border-line overflow-hidden">
+    <button id="balToggle" aria-expanded="false" class="w-full h-14 px-4 flex items-center justify-between text-left active:bg-line">
+      <span><span class="block text-[16px] font-semibold">Balances, limits &amp; due dates</span></span>
+      <svg id="balChev" class="transition-transform" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#93A1AE" stroke-width="2.4" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+    <div id="balBody" class="hidden px-4 pb-4">
+      <p class="text-[13px] text-muted leading-relaxed mb-3">Type what the account showed on a day. Everything you log after that day moves it for you.</p>
+      <button id="balShowAll" class="hidden mb-3 text-[14px] font-medium active:opacity-60" style="color:#6FB0EE">Show all accounts</button>
+      <div id="balancesList" class="space-y-2.5"></div>
+      <button id="saveBalances" class="mt-3 w-full h-12 rounded-xl bg-accent text-white text-[15px] font-semibold active:opacity-80">Save balances</button>
+    </div>
   </section>
   <section class="mt-3 bg-card rounded-2xl border border-line p-4">
     <p class="text-[16px] font-bold tracking-tight mb-1">Backup</p>
@@ -268,7 +299,7 @@ tailwind.config = {
     <button id="tab-spending" data-tab="spending" class="tabbtn flex-1 h-12 flex flex-col items-center justify-center gap-0.5 text-muted active:opacity-60"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12A9 9 0 1 1 12 3v9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg><span class="text-[10px] font-semibold">Spending</span></button>
     <div class="flex-1 flex justify-center"><button id="openPaste" aria-label="Add transactions" class="brand-grad brand-glow w-[52px] h-[52px] -mt-4 rounded-full bg-accent text-white grid place-items-center shadow-lg active:opacity-80"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div>
     <button id="tab-activity" data-tab="activity" class="tabbtn flex-1 h-12 flex flex-col items-center justify-center gap-0.5 text-muted active:opacity-60"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span class="text-[10px] font-semibold">Activity</span></button>
-    <button id="tab-cards" data-tab="cards" class="tabbtn flex-1 h-12 flex flex-col items-center justify-center gap-0.5 text-muted active:opacity-60"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span class="text-[10px] font-semibold">Cards</span></button>
+    <button id="tab-cards" data-tab="cards" class="tabbtn flex-1 h-12 flex flex-col items-center justify-center gap-0.5 text-muted active:opacity-60"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg><span class="text-[10px] font-semibold">Accounts</span></button>
   </div>
 </nav>
 
@@ -424,17 +455,18 @@ tailwind.config = {
 </div>
 
 <!-- ============ EDIT ONE TRANSACTION ============ -->
-<div id="editSheet" data-open="false" class="sheet fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-3xl border-t border-line flex flex-col">
+<div id="editSheet" data-open="false" class="sheet fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-3xl border-t border-line flex flex-col max-h-[92vh]">
   <div class="grab shrink-0 pt-3 pb-2 flex justify-center touch-none cursor-grab" role="button" aria-label="Close"><span class="block w-11 h-[5px] rounded-full bg-white/30"></span></div>
 
-  <div class="sheet-head px-5 pt-1 pb-3 border-b border-line flex items-center justify-between">
-    <div id="editHead" class="flex items-center gap-2.5 min-w-0"></div>
+  <div class="overflow-y-auto hide-scroll">
+  <div class="sheet-head px-5 pt-1 pb-3 border-b border-line">
+    <div id="editHead" class="w-full"></div>
   </div>
   <div class="px-5 py-4 space-y-2">
     <div class="flex gap-2">
-      <input id="editDate" type="date" class="cell num text-[14px]" aria-label="Date">
+      <input id="editDate" type="date" class="cell num text-[14px]" style="flex:1 1 0;min-width:0" aria-label="Date">
       <button id="editDir" class="w-20 shrink-0 rounded-[.6rem] border text-[13px] font-semibold"></button>
-      <input id="editAmount" type="number" inputmode="decimal" step="0.01" min="0" class="cell num text-[15px] font-semibold w-28 shrink-0 text-right" aria-label="Amount">
+      <input id="editAmount" type="number" inputmode="decimal" step="0.01" min="0" class="cell num text-[15px] font-semibold shrink-0 text-right" style="width:112px;flex:none" aria-label="Amount">
     </div>
     <input id="editDesc" type="text" class="cell text-[15px]" placeholder="Description" aria-label="Description">
     <div class="flex gap-2">
@@ -445,6 +477,8 @@ tailwind.config = {
       <button id="editDelete" class="h-12 px-4 rounded-xl border border-over/40 text-over text-[15px] font-semibold active:bg-over/5">Delete</button>
       <button id="editSave" class="flex-1 h-12 rounded-xl bg-accent text-white text-[15px] font-semibold active:opacity-80">Save changes</button>
     </div>
+  </div>
+  <div id="editStats" class="px-5 pb-5"></div>
   </div>
   <div class="safe-b"></div>
 </div>
@@ -527,6 +561,9 @@ tailwind.config = {
   let incomes = { default: 0 };    // what you expect to bring in, per month
   let settings = { countDeposits: true, primaryAcct: '' };
   let acctFilter = 'All';
+  let typeFilter = 'all';          // Activity: all | spend | in | pay | check
+  let balFocus = null;             // Accounts: show one account's balance form
+  let showAcctChips = false;
   let accounts = {};               // per card: { balance, limit }
   let catBudgets = {};             // per category: a monthly limit
   let viewMonth = monthKey(new Date());
@@ -2076,6 +2113,15 @@ tailwind.config = {
     }
 
     renderHero(cash, owed, bankNames.length, cardNames.length);
+    renderHomeMonth(setIncome ? moneyIn : income, spent, setIncome);
+    renderRecent(list);
+    renderAccountsTab(cash, owed, bankNames.length, cardNames.length);
+    $('actSpentLbl').textContent = 'Spent in ' + monthShort(viewMonth).split(' ')[0];
+    $('spentLbl').textContent = 'Spent in ' + monthShort(viewMonth).split(' ')[0];
+    $('setBudgetRow').classList.toggle('hidden', budget > 0);
+    $('editBudget').classList.toggle('invisible', !(budget > 0));
+    $('meterBox').classList.toggle('hidden', !(budget > 0));
+    $('filterDot').classList.toggle('hidden', acctFilter === 'All');
     renderNudge();
     $('reviewCardTitle').textContent = 'Review ' + monthShort(reviewMonthKey()).split(' ')[0];
     if ($('reviewSheet').dataset.open === 'true') renderMonthReview();
@@ -2123,26 +2169,176 @@ tailwind.config = {
     renderNag();
   }
 
+
+  /* ---------- Build 116: shared display helpers ---------- */
+  const ISSUER_RE = /^(capital one|amex|american express|chase|citi|discover|wells fargo|bank of america|us bank|navy federal|usaa)\s+/i;
+  function shortAcct(n) { const s = String(n || '').replace(ISSUER_RE, '').trim(); return s || String(n || ''); }
+  // Bank-statement names read like people say them ("Ezschool* Ezschool-Lun" -> "EZSchool Lunch").
+  const NICE_DESC = [
+    [/ezschool/i, 'EZSchool Lunch'],
+    [/^h-?e-?b\b/i, 'H-E-B'],
+    [/^bill miller/i, 'Bill Miller Bar-B-Q'],
+  ];
+  function niceDesc(t) {
+    const d = typeof t === 'string' ? t : (t.desc || '');
+    if (t && typeof t === 'object' && t.xfer && t.payTo) return 'Paid ' + shortAcct(t.payTo);
+    for (const [re, name] of NICE_DESC) if (re.test(d)) return name;
+    const m = d.match(/^([^*]{2,})\*\s*(.+)$/);
+    if (m) { const a = m[1].trim(), b = m[2].trim(); return b.toLowerCase().startsWith(a.toLowerCase()) ? b : a + ' ' + b; }
+    return d;
+  }
+  function catalogEntry(n) { const k = String(n || '').toLowerCase(); return CARD_CATALOG.find(e => e[0].toLowerCase() === k) || null; }
+  // The colours of an account's card, for faces and the little swatch.
+  function acctFaceBg(n) {
+    const info = accounts[n] || {};
+    if (info.look) return lookBg(info.look);
+    const art = cardArt(n);
+    if (art) return `linear-gradient(135deg,${art.bg[0]},${art.bg[1]})`;
+    const ce = catalogEntry(n);
+    if (ce) return lookBg(catalogLook(ce));
+    const c = acctColor(n);
+    return `linear-gradient(135deg,${shade(c, -0.45)},${c})`;
+  }
+  function acctFaceInk(n) {
+    const info = accounts[n] || {};
+    if (info.look && info.look.letter) return info.look.letter;
+    const ce = catalogEntry(n);
+    if (ce && !info.look && !cardArt(n)) { const l = catalogLook(ce); if (l && l.letter) return l.letter; }
+    return '#F3F6FA';
+  }
+  function acctSwatch(n) {
+    if (!n || n === 'Unassigned') return '';
+    return `<span class="inline-block shrink-0 rounded-[3px] align-[-1px]" style="width:18px;height:12px;background:${acctFaceBg(n)}"></span>`;
+  }
+  // Entries worth a second look: no category, or no card/account.
+  function needsCheck(t) {
+    if ((t.acct || 'Unassigned') === 'Unassigned') return true;
+    return !t.xfer && (!t.cat || t.cat === 'Uncategorized');
+  }
+  function passesType(t) {
+    if (typeFilter === 'spend') return isSpend(t);
+    if (typeFilter === 'in') return isMoneyIn(t);
+    if (typeFilter === 'pay') return !!t.xfer;
+    if (typeFilter === 'check') return needsCheck(t);
+    return true;
+  }
+  function moneyIcon(name) { return iconSvg(name, '#E8A54B', 18); }
+
+  /* Home: what came in against what went out this month. */
+  function renderHomeMonth(inAmt, spent, setIncome) {
+    const box = $('homeMonth');
+    const name = monthShort(viewMonth).split(' ')[0];
+    const isNow = viewMonth === monthKey(new Date());
+    const peak = Math.max(inAmt, spent, 1);
+    const diff = inAmt - spent;
+    let note = '';
+    if (!inAmt && !spent) note = `<p class="text-[14px] text-muted mt-3">Nothing logged for ${esc(name)} yet. Tap + to add.</p>`;
+    else if (!inAmt) note = `<button data-income class="mt-4 w-full rounded-[14px] px-3.5 py-3 text-left text-[14px] active:opacity-70" style="background:#1A2A3B;color:#BFDBF5">Add your monthly income to see what's left. <span class="font-semibold" style="color:#6FB0EE">Set income</span></button>`;
+    else if (diff < 0) note = `<div class="mt-4 rounded-[14px] px-3.5 py-3 flex gap-2.5 items-center" style="background:#2A2316">
+        <svg class="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A54B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+        <p class="num text-[14px] leading-snug" style="color:#F1D9B0">${money(-diff)} more went out than came in. <button data-flow="out" class="font-semibold active:opacity-60" style="color:#F5C77A">See where</button></p></div>`;
+    else note = `<div class="mt-4 rounded-[14px] px-3.5 py-3 flex gap-2.5 items-center" style="background:#15302A">
+        <svg class="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3CCB8F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>
+        <p class="num text-[14px] leading-snug" style="color:#BFEBD6">${money(diff)} left after spending${isNow ? ' so far' : ''}.</p></div>`;
+    const bar = (label, amt, col, flow, sign) => `<button data-flow="${flow}" class="block w-full text-left active:opacity-70">
+        <span class="flex justify-between text-[15px]"><span class="text-muted">${label}</span><span class="num font-semibold" style="${flow === 'in' ? 'color:#3CCB8F' : ''}">${sign}${money(amt)}</span></span>
+        <span class="block mt-1.5 h-2.5 rounded-full" style="background:#20262D"><span class="block h-2.5 rounded-full" style="width:${Math.max(amt / peak * 100, amt ? 2 : 0).toFixed(1)}%;background:${col}"></span></span></button>`;
+    box.innerHTML = `<div class="flex items-baseline justify-between">
+        <p class="text-[17px] font-semibold">${esc(name)}${isNow ? ' so far' : ''}</p>
+        <button data-income class="text-[14px] font-medium active:opacity-60" style="color:#6FB0EE">${setIncome ? 'Income ' + money(setIncome).replace('.00', '') : 'Set income'}</button>
+      </div>
+      <div class="mt-4 space-y-3">${bar(setIncome ? 'Coming in' : 'Came in', inAmt, '#3CCB8F', 'in', '+')}${bar('Went out', spent, '#E8A54B', 'out', '')}</div>${note}`;
+  }
+
+  /* Home: the last few entries of the month. */
+  function txRowHtml(t, opts) {
+    opts = opts || {};
+    const pay = t.xfer;
+    const sub = pay
+      ? (t.payTo ? 'From ' + esc(shortAcct(t.acct)) + ' · not spending' : 'Payment · ' + esc(shortAcct(t.acct || 'Unassigned')))
+      : `${esc(t.cat || 'Uncategorized')}${t.acct && t.acct !== 'Unassigned' ? ' · ' + esc(shortAcct(t.acct)) : ''}`;
+    const amt = pay ? `<span style="color:#6FB0EE">${t.amount < 0 ? '+' : ''}${money(Math.abs(t.amount))}</span>`
+      : t.amount < 0 ? `<span style="color:#3CCB8F">+${money(Math.abs(t.amount))}</span>` : money(t.amount);
+    const flag = needsCheck(t) ? '<span class="ml-1.5 inline-block w-1.5 h-1.5 rounded-full align-middle" style="background:#E8A54B"></span>' : '';
+    return `<div class="${opts.front ? 'swipe-front ' : ''}relative flex items-center gap-3 px-4 py-3 bg-card active:bg-page" data-edit="${t.id}">
+        ${txChip(t, 34)}
+        <div class="min-w-0 flex-1">
+          <p class="text-[16px] font-medium truncate">${esc(niceDesc(t))}${flag}</p>
+          <p class="text-[13px] text-muted truncate flex items-center gap-1.5">${!pay && t.acct && t.acct !== 'Unassigned' ? acctSwatch(t.acct) : ''}<span class="truncate">${sub}</span></p>
+        </div>
+        <div class="num text-[16px] font-semibold shrink-0">${amt}</div>
+      </div>`;
+  }
+  function renderRecent(list) {
+    const rows = list.slice().sort((a, b) => b.date.localeCompare(a.date) || (b.at || 0) - (a.at || 0)).slice(0, 4);
+    $('homeRecentSec').classList.toggle('hidden', !rows.length);
+    $('recentList').innerHTML = rows.map(t => txRowHtml(t)).join('');
+  }
+
+  /* Accounts tab: cash, cards as faces, banks. */
+  function cardStatus(n) {
+    const info = accounts[n] || {};
+    const p = duePaidBy(n);
+    if (p) return { text: '✓ Paid ' + paidLabel(p).replace(/^paid /, '').replace(/^.*· /, ''), full: 'Paid ' + paidLabel(p).replace(/^paid /, ''), col: '#3CCB8F', ok: true };
+    const dt = nextDue(info);
+    if (dt) return { text: dueLabel(dt), full: dueLabel(dt).replace(/^due/, 'Due'), col: dueColor(dt) === '#93A1AE' ? '#B9C3CC' : dueColor(dt), ok: false };
+    return null;
+  }
+  function renderAccountsTab(cash, owed, nBanks, nCards) {
+    $('accCash').textContent = nBanks ? money(cash) : '—';
+    $('accOwed').textContent = nCards ? money(owed) : '—';
+    const all = sortAccts(Array.from(new Set(Object.keys(accounts).concat(transactions.map(t => t.acct || 'Unassigned')))).filter(n => n && n !== 'Unassigned'));
+    const cards = all.filter(isCardAcct), banks = all.filter(n => !isCardAcct(n));
+    let limSum = 0, owedSum = 0;
+    $('accCards').innerHTML = cards.length ? cards.map(n => {
+      const info = accounts[n] || {}, bd = balanceDetail(n), lim = Number(info.limit) || 0, ink = acctFaceInk(n);
+      if (lim) { limSum += lim; owedSum += Math.max(bd.now, 0); }
+      const st = cardStatus(n), pct = lim ? Math.min(bd.now / lim * 100, 100) : 0;
+      return `<button data-acct="${esc(n)}" class="block w-full text-left rounded-[18px] p-4 active:opacity-80" style="background:${acctFaceBg(n)};color:${ink};box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.08)">
+        <span class="flex justify-between items-center gap-3"><span class="text-[16px] font-semibold truncate">${esc(shortAcct(n))}</span><span class="num text-[13px] shrink-0" style="opacity:.8">${last4(n) ? '•• ' + esc(last4(n)) : ''}</span></span>
+        <span class="flex justify-between items-end gap-3 mt-4">
+          <span><span class="block text-[12px]" style="opacity:.75">${info.asOf ? 'Owed' : 'Balance not set'}</span><span class="num block text-[24px] font-bold tracking-tight">${info.asOf ? money(bd.now) : '—'}</span></span>
+          ${st ? `<span class="num text-[12px] font-semibold rounded-[10px] px-2.5 py-1.5 shrink-0" style="background:rgba(0,0,0,.28);color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.text)}</span>` : ''}
+        </span>
+        ${lim ? `<span class="block mt-3 h-[5px] rounded-full" style="background:rgba(255,255,255,.18)"><span class="block h-[5px] rounded-full" style="width:${Math.max(pct, 0).toFixed(1)}%;background:${pct >= 70 ? '#F2937C' : pct >= 30 ? '#F5C77A' : '#7BEBBA'}"></span></span>
+          <span class="num flex justify-between mt-1.5 text-[12px]" style="opacity:.8"><span>${Math.round(pct)}% used</span><span>${money(Math.max(lim - bd.now, 0)).replace('.00', '')} left</span></span>` : ''}
+      </button>`;
+    }).join('') : `<p class="px-1 text-[14px] text-muted">No cards yet. Tap + to add one.</p>`;
+    $('accUtil').textContent = limSum ? Math.round(owedSum / limSum * 100) + '% of your limits used' : '';
+    $('accBanksSec').classList.toggle('hidden', !banks.length);
+    $('accBanks').innerHTML = banks.map(n => bankRowHtml(n)).join('');
+  }
+  function bankRowHtml(n) {
+    const info = accounts[n] || {}, bd = balanceDetail(n);
+    const kind = acctIcon(n) === 'vault' ? 'Savings' : acctIcon(n) === 'swap' ? 'Payment app' : 'Checking';
+    const pays = Object.keys(accounts).some(c => isCardAcct(c)) && (settings.primaryAcct === n || defaultFrom() === n);
+    return `<button data-acct="${esc(n)}" class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-page">
+        ${acctTile(n, 40, 18, '.65rem')}
+        <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted">${kind}${pays ? ' · pays your cards' : ''}</span></span>
+        <span class="num text-[16px] font-semibold shrink-0" style="color:${info.asOf ? (bd.now >= 0 ? '#3CCB8F' : '#F2937C') : '#93A1AE'}">${info.asOf ? money(bd.now) : 'Set balance'}</span>
+      </button>`;
+  }
+
   /* Home: what is truly yours, cash against what the cards are carrying. */
   function renderHero(cash, owed, nBanks, nCards) {
     const netEl = $('heroNet'), sub = $('heroSub'), bar = $('heroBar'), lbl = $('heroBarLbl');
     if (!nBanks && !nCards) {
       netEl.textContent = '—'; netEl.style.color = '';
-      sub.textContent = 'Add your balances in the Cards tab to see where you stand.';
+      sub.textContent = 'Add your balances in the Accounts tab to see where you stand.';
       bar.classList.add('hidden'); lbl.classList.add('hidden'); lbl.classList.remove('flex');
       return;
     }
     const net = cash - owed;
     netEl.textContent = (net < 0 ? '\u2212' : '') + money(Math.abs(net));
-    netEl.style.color = net < 0 ? '#F08A72' : '#35C08A';
-    sub.textContent = money(cash) + ' cash minus ' + money(owed) + ' on cards';
+    netEl.style.color = net < 0 ? '#F2937C' : '#3CCB8F';
+    sub.textContent = money(cash) + ' cash · ' + money(owed) + ' owed on cards';
     const total = cash + owed;
     if (total > 0) {
       const cp = cash / total * 100;
-      bar.innerHTML = (cash > 0 ? `<div style="width:${cp.toFixed(1)}%;background:#35C08A"></div>` : '') +
-                      (owed > 0 ? `<div style="flex:1;background:#E2614A"></div>` : '');
-      lbl.innerHTML = `<span>Cash ${Math.round(cp)}%</span><span>Owed ${100 - Math.round(cp)}%</span>`;
-      bar.classList.remove('hidden'); lbl.classList.remove('hidden'); lbl.classList.add('flex');
+      bar.innerHTML = (cash > 0 ? `<div style="width:${Math.max(cp, 1.5).toFixed(1)}%;background:#3CCB8F"></div>` : '') +
+                      (owed > 0 ? `<div style="flex:1;background:${cash >= owed ? '#2B4A40' : '#4A2E29'}"></div>` : '');
+      bar.style.background = '#20262D';
+      bar.classList.remove('hidden');
     } else {
       bar.classList.add('hidden'); lbl.classList.add('hidden'); lbl.classList.remove('flex');
     }
@@ -2349,20 +2545,22 @@ tailwind.config = {
       spent: Math.max(transactions.filter(t => t.date.slice(0, 7) === mk && isSpend(t)).reduce((s, t) => s + t.amount, 0), 0),
       budget: budgetFor(mk)
     }));
+    // Months before your first entry are left off instead of showing empty.
+    while (data.length > 1 && !data[0].spent && data[0].key !== viewMonth) data.shift();
     const peak = Math.max.apply(null, data.map(d => d.spent).concat([1]));
 
     $('trendStrip').innerHTML = `
-      <div class="flex items-end gap-1">
+      <div class="flex items-end gap-2.5">
         ${data.map(d => {
           const over = d.budget > 0 && d.spent > d.budget;
           const on = d.key === viewMonth;
           // green while there is budget left, black once the month goes over
-          const col = !d.budget ? '#93A1AE' : over ? '#E9EEF3' : '#2FA383';
-          const h = d.spent ? Math.max(6, (d.spent / peak) * 44) : 3;
-          return `<button data-month="${d.key}" class="flex-1 flex flex-col items-center gap-1.5 rounded-lg py-1 ${on ? 'bg-page' : 'active:bg-page/60'}">
-            <span class="num text-[10px] ${on ? 'font-semibold' : ''}" style="color:${d.spent ? col : '#93A1AE'};opacity:${on ? 1 : 0.75}">${d.spent ? compact(d.spent) : '–'}</span>
-            <span class="w-full rounded-t-[3px]" style="height:${h.toFixed(1)}px;background:${col};opacity:${on ? 1 : 0.32}"></span>
-            <span class="text-[10px] ${on ? 'font-semibold' : 'text-muted'}">${esc(monthShort(d.key).slice(0, 3))}</span>
+          const col = over ? '#F2937C' : 'linear-gradient(180deg,#3D8BE0,#2BC48A)';
+          const h = d.spent ? Math.max(8, (d.spent / peak) * 96) : 4;
+          return `<button data-month="${d.key}" class="flex-1 flex flex-col items-center gap-1.5 active:opacity-70">
+            <span class="num text-[12px] ${on ? 'font-semibold text-ink' : 'text-muted'}">${d.spent ? compact(d.spent) : '–'}</span>
+            <span class="w-full rounded-[10px]" style="height:${h.toFixed(1)}px;background:${on ? col : '#2B333C'}"></span>
+            <span class="text-[13px] ${on ? 'font-semibold text-ink' : 'text-muted'}">${esc(monthShort(d.key).slice(0, 3))}</span>
           </button>`;
         }).join('')}
       </div>`;
@@ -2625,6 +2823,7 @@ tailwind.config = {
   }
 
   /* A due date rolls forward a month at a time, so one entry keeps working. */
+  function isoOf(d) { return iso(d.getFullYear(), d.getMonth() + 1, d.getDate()); }
   function dueValue(info) {
     if (info.dueDate) return info.dueDate;
     if (info.dueDay) {                              // from the older day-only field
@@ -2719,94 +2918,73 @@ tailwind.config = {
   }
 
   function renderAccounts(list) {
-    const box = $('acctList'), map = accountsIn(list);
+    const map = accountsIn(list);
     const active = Object.keys(map);                       // had entries this month
-    /* Every account you've set up shows every month, even before it has a
-       charge. A card also shows payments you made to it from the bank this
-       month ("CAPITAL ONE ... PMT" on Frost), matched the same way the
-       balance itself matches them. */
     Object.keys(accounts).forEach(n => { if (!map[n]) map[n] = { out: 0, in: 0, paid: 0, n: 0 }; });
-    list.forEach(t => {
-      if (!t.xfer) return;
-      const target = payTarget(t);
-      if (target && target !== (t.acct || 'Unassigned') && map[target] && isCardAcct(target) && !cardSideTwin(target, t)) {
-        map[target].paid += Math.abs(t.amount);
-        map[target].fromBank = (map[target].fromBank || 0) + 1;
-      }
-    });
-    const names = sortAccts(Object.keys(map));
+    const names = sortAccts(Object.keys(map)).filter(n => n !== 'Unassigned');
+    const cards = names.filter(isCardAcct), banks = names.filter(n => !isCardAcct(n));
 
-    if (!names.length) {
-      box.innerHTML = `<p class="px-4 py-6 text-[14px] text-muted text-center">Nothing logged in ${esc(monthShort(viewMonth))}.</p>`;
-    } else {
-      box.innerHTML = names.map(n => `
-        <button class="w-full text-left px-4 py-3 active:bg-page ${n === acctFilter ? 'bg-page/60' : ''}" data-acct="${esc(n)}">
-          <div class="flex items-center gap-3">
-            ${acctTile(n, 38, 17, '.6rem')}
-            <span class="text-[16px] font-medium truncate flex-1">${esc(n)}</span>
-            <span class="num text-[16px] font-semibold shrink-0">${money(map[n].out)}</span>
-          </div>
-          <p class="text-[13px] text-muted mt-0.5 pl-[50px]">${map[n].n ? map[n].n + ' entr' + (map[n].n === 1 ? 'y' : 'ies') : 'No charges yet'}${map[n].in ? ' · ' + money(map[n].in) + (acctIcon(n) === 'card' ? ' refunded' : ' in') : ''}${map[n].paid ? ' · <span class="font-semibold" style="color:#4F93D6">' + money(map[n].paid) + ' paid</span>' : ''}${owedLabel(n)}</p>
-          ${dueStrip(n)}${utilStrip(n)}${bankStrip(n, map[n])}
-        </button>`).join('');
-    }
+    $('homeCardsSec').classList.toggle('hidden', !cards.length);
+    let withDue = 0, paid = 0;
+    $('acctList').innerHTML = cards.map(n => {
+      const info = accounts[n] || {}, bd = balanceDetail(n), lim = Number(info.limit) || 0;
+      const st = cardStatus(n);
+      if (st) { withDue++; if (st.ok) paid++; }
+      const sub = st ? `<span style="color:${st.ok ? '#8FD9B6' : st.col}">${esc(st.ok ? st.full : st.full)}</span>`
+        : `<span>${map[n].n ? money(map[n].out) + ' charged this month' : 'No due date set'}</span>`;
+      const right = info.asOf
+        ? `<span class="num block text-[16px] font-semibold">${money(bd.now)}</span><span class="num block text-[13px] text-muted mt-0.5">${lim ? Math.round(Math.max(bd.now, 0) / lim * 100) + '% used' : 'owed'}</span>`
+        : `<span class="num block text-[16px] font-semibold">${money(map[n].out)}</span><span class="block text-[13px] text-muted mt-0.5">spent</span>`;
+      return `<button class="w-full text-left flex items-center gap-3 px-4 py-3.5 active:bg-page" data-acct="${esc(n)}">
+          ${acctTile(n, 40, 18, '.65rem')}
+          <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(shortAcct(n))}</span><span class="num block text-[13px] mt-0.5 truncate">${sub}</span></span>
+          <span class="text-right shrink-0">${right}</span>
+        </button>`;
+    }).join('');
+    $('cardsBadge').innerHTML = withDue && paid === withDue
+      ? `<span class="text-[13px] font-semibold flex items-center gap-1 rounded-xl px-2.5 py-1.5" style="color:#3CCB8F;background:#15302A"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>All paid this cycle</span>` : '';
 
-    const chips = ['All'].concat(names.filter(n => active.includes(n)));   // filter by accounts with rows
+    $('homeCashSec').classList.toggle('hidden', !banks.length);
+    $('cashList').innerHTML = banks.map(n => bankRowHtml(n)).join('');
+
+    const chips = ['All'].concat(sortAccts(active));   // filter by accounts with rows
     if (!chips.includes(acctFilter)) acctFilter = 'All';
     $('acctChips').innerHTML = chips.length > 1 ? chips.map(c => `
-      <button data-chip="${esc(c)}" class="shrink-0 flex items-center gap-1.5 px-3 h-8 rounded-full text-[13px] font-medium border ${c === acctFilter ? 'text-white' : 'bg-card border-line text-muted'}"
+      <button data-chip="${esc(c)}" class="shrink-0 flex items-center gap-1.5 px-3 h-9 rounded-full text-[14px] font-medium border ${c === acctFilter ? 'text-white' : 'bg-card border-line text-muted'}"
         style="${c === acctFilter ? 'background:' + (c === 'All' ? '#2A3541' : acctColor(c)) + ';border-color:' + (c === 'All' ? '#2A3541' : acctColor(c)) : ''}">
-        ${c === 'All' ? '' : `<span class="w-2 h-2 rounded-full" style="background:${c === acctFilter ? '#ffffff' : acctColor(c)}"></span>`}${esc(c)}</button>`).join('') : '';
+        ${c === 'All' ? 'All accounts' : acctSwatch(c) + esc(shortAcct(c))}</button>`).join('') : '';
   }
 
   function renderCategories(list, spent) {
     const box = $('catList'), map = {}, counts = {};
     list.filter(isSpend).forEach(t => { const c = spendCat(t); map[c] = (map[c] || 0) + t.amount; counts[c] = (counts[c] || 0) + 1; });
     const cats = positiveCats(Object.keys(map).map(k => ({ name: k, total: map[k], n: counts[k] }))).sort((a, b) => b.total - a.total);
-    if (!cats.length) { box.innerHTML = `<p class="px-4 py-6 text-[14px] text-muted text-center">Nothing spent in ${esc(monthShort(viewMonth))}.</p>`; return; }
-    const top = cats[0].total;
+    if (!cats.length) { box.innerHTML = `<p class="px-4 py-6 text-[14px] text-muted text-center">Nothing spent in ${esc(monthShort(viewMonth))}.</p>`; $('catLegend').innerHTML = ''; return; }
+    let anyBudget = false;
     box.innerHTML = cats.map(c => {
       const share = spent > 0 ? (c.total / spent) * 100 : 0;
-      const st = catStyle(c.name);
       const cb = catBudget(c.name);
-      const w = top > 0 ? (c.total / top) * 100 : 0;
-
-      // With a budget: a ring meter and the dollars left.
+      let col = '#5B9EE0', line, w = share;
       if (cb > 0) {
-        const pct = (c.total / cb) * 100;
-        const col = budgetColor(pct);
-        const left = cb - c.total;
-        return `<button class="w-full text-left px-4 py-2.5 active:bg-page" data-cat="${esc(c.name)}">
-          <div class="flex items-center gap-2.5">
-            ${ringChip(c.name, pct, col, 38)}
-            <div class="min-w-0 flex-1">
-              <p class="text-[15px] font-medium truncate">${esc(c.name)}</p>
-              <p class="num text-[12px] mt-0.5 truncate"><span style="color:${col}">${Math.round(pct)}% used</span><span class="text-muted"> · ${left >= 0 ? money(left) + ' left' : money(-left) + ' over'}</span></p>
-            </div>
-            <span class="num text-[15px] font-semibold shrink-0">${money(c.total)}</span>
-            <svg class="shrink-0 text-muted -mr-0.5" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
-          </div>
-          <div class="mt-2 flex items-center gap-2.5 pl-[58px]">
-            <div class="flex-1 h-1.5 rounded-full overflow-hidden" style="background:${col}33"><div class="h-full rounded-full" style="width:${Math.min(pct, 100).toFixed(1)}%;background:${col}"></div></div>
-            <span class="num text-[12px] text-muted shrink-0">${money(c.total).replace('.00', '')} / ${money(cb).replace('.00', '')}</span>
-          </div>
-        </button>`;
+        anyBudget = true;
+        const pct = (c.total / cb) * 100, left = cb - c.total;
+        col = pct > 100 ? '#F2937C' : pct >= 75 ? '#E8A54B' : '#3CCB8F';
+        w = Math.min(pct, 100);
+        line = `<span style="color:${col}">${left >= 0 ? money(left) + ' left of ' + money(cb).replace('.00', '') : money(-left) + ' over ' + money(cb).replace('.00', '')}</span>`;
+      } else {
+        line = `${sharePct(c.total, spent)} of spending · ${c.n} purchase${c.n === 1 ? '' : 's'}`;
       }
-
-      // Without one: the icon and a bar showing its share of the month.
-      return `<button class="w-full text-left px-4 py-2.5 active:bg-page" data-cat="${esc(c.name)}">
-        <div class="flex items-center gap-2.5">
-          ${catChip(c.name, 30)}
-          <span class="text-[15px] font-medium truncate flex-1">${esc(c.name)}</span>
-          <span class="num text-[15px] font-semibold shrink-0">${money(c.total)}</span>
-          <svg class="shrink-0 text-muted" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
-        </div>
-        <div class="mt-1.5 flex items-center gap-2.5 pl-[48px]">
-          <div class="flex-1 h-1.5 rounded-full bg-page overflow-hidden"><div class="h-full rounded-full" style="width:${w.toFixed(1)}%;background:${st.color}"></div></div>
-          <span class="num text-[12px] text-muted shrink-0">${c.n} · ${Math.round(share)}%</span>
-        </div>
+      return `<button class="w-full text-left px-4 py-3.5 active:bg-page" data-cat="${esc(c.name)}">
+        <span class="flex items-center gap-3">
+          <span class="w-[34px] grid place-items-center shrink-0">${emojiGlyph(c.name, 26)}</span>
+          <span class="min-w-0 flex-1"><span class="block text-[16px] font-semibold truncate">${esc(c.name)}</span><span class="num block text-[13px] text-muted mt-0.5 truncate">${line}</span></span>
+          <span class="num text-[16px] font-semibold shrink-0">${money(c.total)}</span>
+        </span>
+        <span class="block mt-2.5 ml-[46px] h-1.5 rounded-full" style="background:#20262D"><span class="block h-1.5 rounded-full" style="width:${Math.max(w, 1).toFixed(1)}%;background:${col}"></span></span>
       </button>`;
     }).join('');
+    const dot = (c, l) => `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${c}"></span>${l}</span>`;
+    $('catLegend').innerHTML = anyBudget ? dot('#5B9EE0', 'No budget') + dot('#3CCB8F', 'On track') + dot('#E8A54B', 'Close (75%+)') + dot('#F2937C', 'Over') : '';
   }
 
   /* =============================================================
@@ -3242,8 +3420,18 @@ tailwind.config = {
             <p class="text-muted mt-1">Only do this if your bank's balance on ${esc(dayLabel(bd.asOf))} did not already include ${L.n === 1 ? 'it' : 'them'}.</p>
             <button data-countlate="${esc(name)}" class="mt-2.5 h-10 px-4 rounded-lg bg-accent text-white font-semibold active:opacity-80">Count ${L.n === 1 ? 'it' : 'them'}</button>
           </div>` : ''; })()}
-        <p class="text-[12px] text-muted mt-2.5 leading-relaxed">Everything you log moves this on its own. To resync with what the card says, use Card &amp; account balances in settings.</p>
+        <p class="text-[12px] text-muted mt-2.5 leading-relaxed">Everything you log moves this on its own.</p>
       </div>` : '';
+    const st = !isBank ? cardStatus(name) : null;
+    const actions = `<div class="px-5 py-4 border-b border-line">
+        ${st ? `<div class="rounded-[16px] px-3.5 py-3 mb-3 flex items-center gap-3" style="background:${st.ok ? '#15302A' : '#1E242B'}">
+          <span class="text-[15px] font-semibold" style="color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.ok ? '✓ Paid this cycle' : st.full)}</span>
+          ${st.ok ? `<span class="num text-[13px]" style="color:#A9D9C4">${esc(st.full.replace(/^Paid /, ''))}</span>` : ''}</div>` : ''}
+        <div class="grid ${isBank ? 'grid-cols-1' : 'grid-cols-2'} gap-2.5">
+          ${isBank ? '' : `<button data-paycard="${esc(name)}" class="h-12 rounded-[14px] brand-grad text-white text-[15px] font-semibold active:opacity-80">Pay this card</button>`}
+          <button data-updbal="${esc(name)}" class="h-12 rounded-[14px] bg-page border border-line text-[15px] font-semibold active:bg-line">${bd.asOf ? 'Update balance' : 'Set balance'}</button>
+        </div>
+      </div>`;
 
     const stats = `
       <div class="px-5 py-4 border-b border-line">
@@ -3300,7 +3488,7 @@ tailwind.config = {
     }).join('')
       : `<p class="px-5 py-8 text-[14px] text-muted text-center">Nothing on ${esc(name)} for ${esc(monthShort(viewMonth))}.</p>`;
 
-    $('acctSheetBody').innerHTML = selectMode ? listHtml : (stats + card + listHtml);
+    $('acctSheetBody').innerHTML = selectMode ? listHtml : (card + actions + stats + listHtml);
     paintSelectBar(rows);
   }
 
@@ -3314,10 +3502,15 @@ tailwind.config = {
     if (!t) return;
     editId = id;
     editDir = t.xfer ? 'xfer' : (t.amount < 0 ? 'in' : 'out');
-    $('editHead').innerHTML = (editDir === 'xfer'
-      ? emojiChip(xferEmoji(t), 30)
-      : catChip(editDir === 'in' ? 'Income' : t.cat, 30)) +
-      `<h3 class="text-[16px] font-semibold truncate">Edit transaction</h3>`;
+    const [ey, em, ed] = t.date.split('-').map(Number);
+    const when = new Date(ey, em - 1, ed).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+    $('editHead').innerHTML = `<div class="flex flex-col items-center text-center pt-1">
+        ${txChip(t, 56)}
+        <p class="text-[19px] font-semibold mt-2 max-w-full truncate">${esc(niceDesc(t))}</p>
+        <p class="num text-[36px] font-bold tracking-tight leading-tight mt-0.5" style="${t.xfer ? 'color:#6FB0EE' : t.amount < 0 ? 'color:#3CCB8F' : ''}">${t.amount < 0 && !t.xfer ? '+' : ''}${money(Math.abs(t.amount))}</p>
+        <p class="text-[14px] text-muted mt-1 flex items-center gap-1.5">${esc(when)}${t.acct && t.acct !== 'Unassigned' ? ' · ' + acctSwatch(t.acct) + esc(shortAcct(t.acct)) : ''}</p>
+      </div>`;
+    $('editStats').innerHTML = editStatsHtml(t);
     $('editDate').value = t.date;
     $('editAmount').value = Math.abs(t.amount);
     $('editDesc').value = t.desc;
@@ -3328,6 +3521,36 @@ tailwind.config = {
     $('editSheet').dataset.open = 'true';
     $('scrim').classList.remove('opacity-0', 'pointer-events-none');
     document.body.style.overflow = 'hidden';
+  }
+
+  /* The tap sheet's "this month" panel: this shop, this category, and last month. */
+  function editStatsHtml(t) {
+    if (t.xfer) {
+      const target = payTarget(t);
+      if (!target || target === 'Unassigned' || !accounts[target]) return '';
+      return `<p class="text-[13px] font-semibold text-muted tracking-wide mb-2.5">AFTER THIS PAYMENT</p>
+        <div class="rounded-[18px] bg-page/60 border border-line p-4 flex justify-between text-[15px]"><span class="text-muted">${esc(shortAcct(target))} owed now</span><span class="num font-semibold">${money(balanceDetail(target).now)}</span></div>`;
+    }
+    const mk = t.date.slice(0, 7), prev = shiftMonth(mk, -1);
+    const key = merchantKey(t.desc) || t.desc;
+    const same = transactions.filter(x => !x.xfer && x.date.slice(0, 7) === mk && (merchantKey(x.desc) || x.desc) === key);
+    const shopTotal = same.reduce((a, x) => a + x.amount, 0);
+    const cat = spendCat(t);
+    const catSum = k => Math.max(transactions.filter(x => x.date.slice(0, 7) === k && isSpend(x) && spendCat(x) === cat).reduce((a, x) => a + x.amount, 0), 0);
+    const now = catSum(mk), before = catSum(prev);
+    const cb = catBudget(cat);
+    const monthName = monthShort(mk).split(' ')[0], prevName = monthShort(prev).split(' ')[0];
+    const rows = [];
+    if (t.amount > 0) rows.push([`At ${esc(niceDesc(t))}`, `${same.length} visit${same.length === 1 ? '' : 's'} · ${money(shopTotal)}`]);
+    if (now > 0) rows.push([`All ${esc(cat)}`, money(now) + (cb ? ' of ' + money(cb).replace('.00', '') : '')]);
+    if (!rows.length) return '';
+    const vs = before > 0 && now > 0 ? `<p class="num text-[13px] mt-1" style="color:${now > before ? '#E8A54B' : '#3CCB8F'}">${esc(cat)} ${now > before ? 'up' : 'down'} ${money(Math.abs(now - before))} vs ${esc(prevName)}</p>` : '';
+    const bar = cb ? `<span class="block h-2 rounded-full mt-1" style="background:#20262D"><span class="block h-2 rounded-full" style="width:${Math.min(now / cb * 100, 100).toFixed(1)}%;background:${now > cb ? '#F2937C' : now / cb >= 0.75 ? '#E8A54B' : '#3CCB8F'}"></span></span>` : '';
+    return `<p class="text-[13px] font-semibold text-muted tracking-wide mb-2.5">${esc(monthName.toUpperCase())}</p>
+      <div class="rounded-[18px] bg-page/60 border border-line p-4 space-y-2.5">
+        ${rows.map(r => `<div class="flex justify-between gap-3 text-[15px]"><span class="text-muted truncate">${r[0]}</span><span class="num font-semibold shrink-0">${r[1]}</span></div>`).join('')}
+        ${bar}${vs}
+      </div>`;
   }
 
   function paintEditDir() {
@@ -3431,41 +3654,64 @@ tailwind.config = {
     const box = $('txList');
     const q = searchQ.trim().toLowerCase();
     const base = q ? transactions.filter(t => matchesSearch(t, q)) : all;
-    const list = acctFilter === 'All' ? base : base.filter(t => (t.acct || 'Unassigned') === acctFilter);
+    const byAcct = acctFilter === 'All' ? base : base.filter(t => (t.acct || 'Unassigned') === acctFilter);
+    const list = byAcct.filter(passesType);
+
+    // Type chips and the "needs a look" banner (this month only)
+    const nCheck = all.filter(needsCheck).length;
+    if (typeFilter === 'check' && !nCheck) typeFilter = 'all';
+    const chip = (k, label, warn) => `<button data-type="${k}" class="shrink-0 h-9 px-3.5 rounded-full text-[14px] whitespace-nowrap ${typeFilter === k ? 'font-semibold' : 'font-medium border'}" style="${typeFilter === k ? (warn ? 'background:#F5C77A;color:#1B1407' : 'background:#EEF1F4;color:#0E1216') : warn ? 'background:#2A2316;border-color:#5A4A1E;color:#F5C77A' : 'background:#171C22;border-color:#262D35;color:#EEF1F4'}">${label}</button>`;
+    $('typeChips').innerHTML = chip('all', 'All') + chip('spend', 'Spending') + chip('in', 'Money in') + chip('pay', 'Payments') + (nCheck ? chip('check', 'Check ' + nCheck, true) : '');
+    const ban = $('checkBanner');
+    if (nCheck && typeFilter !== 'check' && !q) {
+      const noAcct = all.filter(t => (t.acct || 'Unassigned') === 'Unassigned').length, noCat = nCheck - noAcct;
+      const why = [noCat ? noCat + ' with no category' : '', noAcct ? noAcct + ' with no card or account' : ''].filter(Boolean).join(' and ');
+      ban.className = 'mt-3 rounded-[16px] px-3.5 py-3 flex gap-2.5 items-center';
+      ban.style.cssText = 'background:#2A2316;border:1px solid #4A3D1C';
+      ban.innerHTML = `<svg class="shrink-0" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A54B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+        <p class="flex-1 text-[14px] leading-snug" style="color:#F1D9B0">${nCheck} entr${nCheck === 1 ? 'y needs' : 'ies need'} a quick look: ${why}.</p>
+        <button data-type="check" class="text-[14px] font-semibold shrink-0 active:opacity-60" style="color:#F5C77A">Review</button>`;
+    } else { ban.className = 'hidden'; ban.innerHTML = ''; }
+
+    const label = { all: '', spend: 'spending', in: 'money in', pay: 'payments', check: 'to check' }[typeFilter];
     $('txHeading').textContent = q ? list.length + (list.length === 1 ? ' match' : ' matches') + ' in all months'
-                                   : monthShort(viewMonth).split(' ')[0] + ' transactions';
+                                   : monthShort(viewMonth).split(' ')[0] + (label ? ' · ' + label : '');
+    $('swipeHint').classList.toggle('hidden', !list.length || !!settings.swipeSeen);
     if (q && !list.length) {
-      box.innerHTML = `<div class="px-4 py-8 text-center"><p class="text-[15px] font-medium">Nothing matches that</p>
+      box.innerHTML = `<div class="mt-2 bg-card rounded-[20px] border border-line px-4 py-8 text-center"><p class="text-[15px] font-medium">Nothing matches that</p>
         <p class="text-[13px] text-muted mt-1">Try part of a merchant name, a category or an amount.</p></div>`;
       return;
     }
     if (!list.length) {
-      box.innerHTML = `<div class="px-4 py-8 text-center">
-        <p class="text-[15px] font-medium">No entries for ${esc(monthShort(viewMonth))}</p>
-        <p class="text-[13px] text-muted mt-1">Paste a batch below and they will land here.</p></div>`;
+      box.innerHTML = `<div class="mt-2 bg-card rounded-[20px] border border-line px-4 py-8 text-center">
+        <p class="text-[15px] font-medium">${typeFilter === 'all' ? 'No entries for ' + esc(monthShort(viewMonth)) : 'Nothing here for ' + esc(monthShort(viewMonth))}</p>
+        <p class="text-[13px] text-muted mt-1">${typeFilter === 'all' ? 'Tap + to add one, or paste a batch.' : 'Try another filter.'}</p></div>`;
       return;
     }
-    const sorted = list.slice().sort((a, b) => sortDesc ? (a.date < b.date ? 1 : a.date > b.date ? -1 : 0) : (a.date > b.date ? 1 : a.date < b.date ? -1 : 0));
-    let lastDay = '';
-    box.innerHTML = sorted.map(t => {
-      let head = '';
-      if (t.date !== lastDay) {
-        lastDay = t.date;
-        const dayOut = sorted.filter(x => x.date === t.date && !x.xfer && x.amount > 0).reduce((a, x) => a + x.amount, 0);
-        head = `<div class="flex justify-between px-4 pt-3 pb-1.5 bg-page/50 text-[11px] font-bold tracking-wide text-muted num"><span>${esc(dayHead(t.date))}</span><span>${dayOut ? money(dayOut) : ''}</span></div>`;
-      }
-      return head + `
-      <div class="flex items-center gap-3 px-4 py-3 active:bg-page" data-edit="${t.id}">
-        ${txChip(t, 34)}
-        <div class="min-w-0 flex-1">
-          <p class="text-[16px] font-medium truncate">${esc(t.desc)}</p>
-          <p class="num text-[13px] text-muted truncate">${t.xfer ? 'Payment' : esc(t.cat)}${t.acct && t.acct !== 'Unassigned' ? ' · ' + esc(t.acct) : ''}</p>
-        </div>
-        <div class="num text-[16px] font-semibold shrink-0 ${t.amount < 0 && !t.xfer ? 'text-income' : ''}" ${t.xfer ? 'style="color:#4F93D6"' : ''}>${t.xfer ? (t.amount < 0 ? '+' : '') + money(Math.abs(t.amount)) : t.amount < 0 ? '+' + money(Math.abs(t.amount)) : money(t.amount)}</div>
-        <button data-del="${t.id}" aria-label="Delete ${esc(t.desc)}" class="w-8 h-8 -mr-1 shrink-0 grid place-items-center rounded-full text-muted active:bg-page">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
-        </button>
-      </div>`;
+    const sorted = list.slice().sort((a, b) => sortDesc ? (b.date.localeCompare(a.date) || (b.at || 0) - (a.at || 0)) : (a.date.localeCompare(b.date) || (a.at || 0) - (b.at || 0)));
+    const today = todayISO();
+    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+    const yesterday = iso(yd.getFullYear(), yd.getMonth() + 1, yd.getDate());
+    const days = [];
+    sorted.forEach(t => { const last = days[days.length - 1]; if (last && last.date === t.date) last.rows.push(t); else days.push({ date: t.date, rows: [t] }); });
+    box.innerHTML = days.map(d => {
+      const spentDay = Math.max(d.rows.filter(isSpend).reduce((a, x) => a + x.amount, 0), 0);
+      const inDay = d.rows.filter(isMoneyIn).reduce((a, x) => a + Math.abs(x.amount), 0);
+      const nPay = d.rows.filter(x => x.xfer).length;
+      const bits = [];
+      if (spentDay) bits.push(money(spentDay) + ' spent');
+      if (inDay) bits.push('+' + money(inDay) + ' in');
+      if (nPay) bits.push(nPay + ' payment' + (nPay === 1 ? '' : 's'));
+      const name = d.date === today ? 'Today' : d.date === yesterday ? 'Yesterday' : dayHead(d.date).replace(/^(\w{3}),? /, (m, w) => w.charAt(0) + w.slice(1).toLowerCase() + ', ').replace(/ ([A-Z]{3}) /, (m, mo) => ' ' + mo.charAt(0) + mo.slice(1).toLowerCase() + ' ');
+      return `<div class="flex items-baseline justify-between px-1 pt-4 pb-2"><p class="text-[15px] font-bold">${esc(name)}</p><p class="num text-[13px] text-muted">${bits.join(' · ')}</p></div>
+        <div class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden">${d.rows.map(t => `
+          <div class="swipe relative overflow-hidden" data-swipe="${t.id}">
+            <div class="absolute inset-y-0 right-0 flex" style="width:160px">
+              <button data-editbtn="${t.id}" class="flex-1 text-[14px] font-semibold text-white" style="background:#3A4450">Edit</button>
+              <button data-del="${t.id}" aria-label="Delete ${esc(t.desc)}" class="flex-1 text-[14px] font-semibold text-white" style="background:#D9553F">Delete</button>
+            </div>
+            ${txRowHtml(t, { front: true })}
+          </div>`).join('')}</div>`;
     }).join('');
   }
 
@@ -3925,7 +4171,7 @@ tailwind.config = {
   }
   let toastTimer;
   function toast(msg) {
-    const t = $('toast'); t.textContent = msg; t.classList.remove('opacity-0');
+    const t = $('toast'); t.style.whiteSpace = ''; t.textContent = msg; t.classList.remove('opacity-0'); t.classList.add('pointer-events-none');
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('opacity-0'), 2400);
   }
   function showMsg(el, html, kind) {
@@ -4028,12 +4274,53 @@ tailwind.config = {
   $('openData').onclick = () => { $('setMsg').classList.add('hidden'); syncBudgetField(); openSheet($('dataSheet')); };
   $('editIncome').onclick = () => { $('setMsg').classList.add('hidden'); syncBudgetField(); openSheet($('dataSheet')); setTimeout(() => { $('incomeInput').focus(); $('incomeInput').scrollIntoView({ block: 'center' }); }, 250); };
 
-  $('acctList').addEventListener('click', function (e) {
+  ['acctList', 'cashList', 'accCards', 'accBanks'].forEach(id => $(id).addEventListener('click', function (e) {
     const btn = e.target.closest('[data-acct]');
     if (!btn) return;
     openAcctSheet(btn.getAttribute('data-acct'));
+  }));
+  $('recentList').addEventListener('click', function (e) { const r = e.target.closest('[data-edit]'); if (r) openEdit(r.getAttribute('data-edit')); });
+  $('seeAllTx').onclick = () => showTab('activity');
+  $('homeMonth').addEventListener('click', function (e) {
+    if (e.target.closest('[data-income]')) { $('editIncome').click(); return; }
+    const f = e.target.closest('[data-flow]'); if (f) openFlow(f.getAttribute('data-flow'));
   });
+  $('filterBtn').onclick = function () {
+    showAcctChips = !showAcctChips;
+    $('acctChipsWrap').classList.toggle('hidden', !showAcctChips);
+    this.setAttribute('aria-expanded', showAcctChips ? 'true' : 'false');
+  };
+  function onTypePick(e) {
+    const b = e.target.closest('[data-type]'); if (!b) return;
+    typeFilter = b.getAttribute('data-type'); render();
+  }
+  $('typeChips').addEventListener('click', onTypePick);
+  $('checkBanner').addEventListener('click', onTypePick);
+  $('acctAddBtn').onclick = function () {
+    const m = $('acctAddMenu'), open = m.classList.contains('hidden');
+    m.classList.toggle('hidden', !open); this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  function setBalOpen(open) {
+    $('balBody').classList.toggle('hidden', !open);
+    $('balToggle').setAttribute('aria-expanded', open ? 'true' : 'false');
+    $('balChev').style.transform = open ? 'rotate(180deg)' : '';
+  }
+  $('balToggle').onclick = () => { const open = $('balBody').classList.contains('hidden'); if (open) { balFocus = null; renderBalances(); } setBalOpen(open); };
+  $('balShowAll').onclick = () => { balFocus = null; renderBalances(); };
+  $('setBudgetRow').onclick = () => $('editBudget').click();
+  function openBalanceFor(name) {
+    closeSheets();
+    balFocus = name; renderBalances(); setBalOpen(true);
+    showTab('cards');
+    setTimeout(() => { $('balSection').scrollIntoView({ block: 'start', behavior: 'smooth' }); }, 60);
+  }
+  function payCardFlow(name) {
+    closeSheets();
+    setTimeout(() => { addState = { step: 'amount', kind: 'card', card: name, from: defaultFrom() }; renderAdd(); openSheet($('addSheet')); }, 30);
+  }
   $('acctSheetBody').addEventListener('click', function (e) {
+    const pc = e.target.closest('[data-paycard]'); if (pc) { payCardFlow(pc.getAttribute('data-paycard')); return; }
+    const ub = e.target.closest('[data-updbal]'); if (ub) { openBalanceFor(ub.getAttribute('data-updbal')); return; }
     const late = e.target.closest('[data-countlate]');
     if (late) {
       const n = late.getAttribute('data-countlate');
@@ -4674,18 +4961,63 @@ tailwind.config = {
     transactions = []; save(); render(); toast('All transactions erased');
   };
 
+  /* Swipe a row left to show Edit and Delete. */
+  let swipeOpen = null, swipe = null;
+  function closeSwipe(el) { const f = el && el.querySelector('.swipe-front'); if (f) f.style.transform = ''; if (swipeOpen === el) swipeOpen = null; }
+  $('txList').addEventListener('touchstart', function (e) {
+    const row = e.target.closest('[data-swipe]'); if (!row || e.target.closest('[data-del],[data-editbtn]')) return;
+    const f = row.querySelector('.swipe-front');
+    swipe = { row, f, x: e.touches[0].clientX, y: e.touches[0].clientY, base: swipeOpen === row ? -160 : 0, dx: 0, lock: null };
+    f.style.transition = 'none';
+  }, { passive: true });
+  $('txList').addEventListener('touchmove', function (e) {
+    if (!swipe) return;
+    const dx = e.touches[0].clientX - swipe.x, dy = e.touches[0].clientY - swipe.y;
+    if (swipe.lock === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) swipe.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (swipe.lock !== 'x') return;
+    e.preventDefault();
+    swipe.dx = dx;
+    const pos = Math.max(Math.min(swipe.base + dx, 0), -190);
+    swipe.f.style.transform = `translateX(${pos}px)`;
+  }, { passive: false });
+  $('txList').addEventListener('touchend', function () {
+    if (!swipe) return;
+    const s0 = swipe; swipe = null;
+    s0.f.style.transition = 'transform .22s ease';
+    if (s0.lock !== 'x') return;
+    const pos = s0.base + s0.dx;
+    if (pos < -70) {
+      if (swipeOpen && swipeOpen !== s0.row) closeSwipe(swipeOpen);
+      s0.f.style.transform = 'translateX(-160px)'; swipeOpen = s0.row;
+      if (!settings.swipeSeen) { settings.swipeSeen = true; save(); $('swipeHint').classList.add('hidden'); }
+    } else { s0.f.style.transform = ''; if (swipeOpen === s0.row) swipeOpen = null; }
+    s0.row.dataset.justSwiped = '1'; setTimeout(() => { delete s0.row.dataset.justSwiped; }, 350);
+  });
+  function deleteWithUndo(id) {
+    const i = transactions.findIndex(t => t.id === id); if (i < 0) return;
+    const gone = transactions[i];
+    transactions.splice(i, 1);
+    save(); render();
+    const t = $('toast');
+    t.style.whiteSpace = 'nowrap';
+    t.innerHTML = `Deleted ${esc(niceDesc(gone))} <button id="undoDel" class="ml-2 font-semibold" style="color:#7CC0FF">Undo</button>`;
+    t.classList.remove('opacity-0', 'pointer-events-none');
+    $('undoDel').onclick = () => { transactions.splice(Math.min(i, transactions.length), 0, gone); save(); render(); t.classList.add('opacity-0', 'pointer-events-none'); };
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.add('opacity-0', 'pointer-events-none'), 4500);
+  }
   $('txList').addEventListener('click', function (e) {
     const del = e.target.closest('[data-del]');
-    if (del) {
-      transactions = transactions.filter(t => t.id !== del.getAttribute('data-del'));
-      save(); render(); toast('Transaction deleted');
-      return;
-    }
+    if (del) { deleteWithUndo(del.getAttribute('data-del')); swipeOpen = null; return; }
+    const eb = e.target.closest('[data-editbtn]');
+    if (eb) { closeSwipe(eb.closest('[data-swipe]')); openEdit(eb.getAttribute('data-editbtn')); return; }
+    const sw = e.target.closest('[data-swipe]');
+    if (sw && sw.dataset.justSwiped) return;
+    if (swipeOpen) { closeSwipe(swipeOpen); return; }
     const row = e.target.closest('[data-edit]');
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 115';
+  const BUILD = '2026-11-18 · 116';
 
   /* =============================================================
      KEEPING THE DATA
@@ -4731,7 +5063,8 @@ tailwind.config = {
   function renderBalances() {
     const names = sortAccts(Array.from(new Set(
       Object.keys(accounts).concat(transactions.map(t => t.acct || 'Unassigned'))
-    )).filter(n => n && n !== 'Unassigned'));
+    )).filter(n => n && n !== 'Unassigned' && (!balFocus || n === balFocus)));
+    $('balShowAll').classList.toggle('hidden', !balFocus);
 
     if (!names.length) {
       $('balancesList').innerHTML = '<p class="text-[13px] text-muted">No accounts yet. They appear here once you paste something.</p>';
@@ -4771,7 +5104,7 @@ tailwind.config = {
         </div>`}
         ${isBank ? '' : `<div class="flex items-center gap-2 mt-2">
           <span class="text-[12px] text-muted shrink-0">due</span>
-          <input class="cell num text-[13px]" type="date" value="${esc(dueValue(info))}" data-due="${esc(n)}" aria-label="${esc(n)} payment due date">
+          <input class="cell num text-[13px]" type="date" value="${esc(nextDue(info) ? isoOf(nextDue(info)) : '')}" data-due="${esc(n)}" aria-label="${esc(n)} payment due date">
           ${(() => {
             if (!dueValue(info)) return '<span class="text-[12px] shrink-0" style="color:#93A1AE" data-duehint>not set</span>';
             const p = duePaidBy(n);
