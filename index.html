@@ -140,7 +140,7 @@ tailwind.config = {
     <div id="acctList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
   </section>
   <section id="homeCashSec" class="mt-6">
-    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5">Cash</h2>
+    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5">Bank accounts</h2>
     <div id="cashList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
   </section>
   <section id="homeRecentSec" class="mt-6">
@@ -258,11 +258,11 @@ tailwind.config = {
   </section>
   <section id="accCardsSec" class="mt-6">
     <div class="flex items-baseline justify-between px-1 mb-2.5"><h2 class="text-[20px] font-bold tracking-tight">Credit cards</h2><span id="accUtil" class="num text-[13px] text-muted"></span></div>
-    <div id="accCards" class="space-y-2.5"></div>
+    <div id="accCards" class="space-y-3"></div>
   </section>
   <section id="accBanksSec" class="mt-6">
-    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5">Banks</h2>
-    <div id="accBanks" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
+    <h2 class="text-[20px] font-bold tracking-tight px-1 mb-2.5">Bank accounts</h2>
+    <div id="accBanks" class="space-y-3"></div>
   </section>
   <section id="balSection" class="mt-6 bg-card rounded-[20px] border border-line overflow-hidden">
     <button id="balToggle" aria-expanded="false" class="w-full h-14 px-4 flex items-center justify-between text-left active:bg-line">
@@ -2224,6 +2224,24 @@ tailwind.config = {
   }
   function moneyIcon(name) { return iconSvg(name, '#E8A54B', 18); }
 
+
+  // A small card-shaped tile for list rows: the card's colours, a chip and its mark.
+  function miniCard(name, w) {
+    w = w || 46; const h = Math.round(w / 1.586);
+    const info = accounts[name] || {}, art = cardArt(name), look = info.look;
+    let mark = '';
+    if (look && look.icon) mark = look.icon === 'initials'
+      ? `<span style="font-weight:700;font-size:${Math.round(h * 0.38)}px;color:${look.letter}">${esc(initials(name))}</span>`
+      : `<span style="font-size:${Math.round(h * 0.5)}px;line-height:1;font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">${look.icon}</span>`;
+    else if (art) mark = `<svg width="${Math.round(h * 0.62)}" height="${Math.round(h * 0.62)}" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${art.svg}</svg>`;
+    else mark = iconSvg(acctIcon(name), acctFaceInk(name), Math.round(h * 0.45));
+    const sheen = 'linear-gradient(115deg,rgba(255,255,255,0) 38%,rgba(255,255,255,.14) 52%,rgba(255,255,255,0) 66%),';
+    return `<span class="shrink-0 relative block rounded-[6px] overflow-hidden" style="width:${w}px;height:${h}px;background:${sheen}${acctFaceBg(name)};box-shadow:0 2px 6px -2px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(255,255,255,.08)">
+        <span class="absolute rounded-[2px]" style="left:${Math.round(w * 0.12)}px;top:${Math.round(h * 0.36)}px;width:${Math.round(w * 0.2)}px;height:${Math.round(h * 0.28)}px;background:linear-gradient(135deg,#E9DFC2,#B7A985)"></span>
+        <span class="absolute grid place-items-center" style="right:${Math.round(w * 0.08)}px;top:0;bottom:0">${mark}</span>
+      </span>`;
+  }
+
   /* Home: what came in against what went out this month. */
   function renderHomeMonth(inAmt, spent, setIncome) {
     const box = $('homeMonth');
@@ -2284,48 +2302,55 @@ tailwind.config = {
     if (dt) return { text: dueLabel(dt), full: dueLabel(dt).replace(/^due/, 'Due'), col: dueColor(dt) === '#93A1AE' ? '#B9C3CC' : dueColor(dt), ok: false };
     return null;
   }
+  function acctFaceHtml(n) {
+    const info = accounts[n] || {}, bd = balanceDetail(n), ink = acctFaceInk(n), card = isCardAcct(n);
+    const lim = card ? Number(info.limit) || 0 : 0;
+    const st = card ? cardStatus(n) : null, pct = lim ? Math.min(bd.now / lim * 100, 100) : 0;
+    const nw = card ? ((catalogEntry(n) || [])[1] || '') : (acctIcon(n) === 'vault' ? 'Savings' : 'Debit');
+    const art = cardArt(n);
+    const mark = art ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.9">${art.svg}</svg>` : '';
+    const pays = !card && (settings.primaryAcct === n || defaultFrom() === n) && Object.keys(accounts).some(isCardAcct);
+    const pill = st ? `<span class="num text-[11px] font-semibold rounded-[9px] px-2 py-1 shrink-0" style="background:rgba(0,0,0,.28);color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.text)}</span>`
+      : pays ? `<span class="text-[11px] font-semibold rounded-[9px] px-2 py-1 shrink-0" style="background:rgba(0,0,0,.25)">Pays your cards</span>` : mark;
+    const label = !info.asOf ? 'Balance not set' : card ? 'Owed' : 'Available';
+    const amtCol = card ? 'inherit' : (bd.now >= 0 ? '#9BF5CF' : '#FFB4A6');
+    return `<button data-acct="${esc(n)}" class="relative block w-full max-w-[318px] mx-auto text-left rounded-[14px] overflow-hidden active:scale-[.985] transition-transform" style="aspect-ratio:1.586;background:${acctFaceBg(n)};color:${ink};box-shadow:0 10px 22px -10px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.07)">
+        <span class="absolute inset-0 pointer-events-none" style="background:linear-gradient(115deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.10) 50%,rgba(255,255,255,0) 65%)"></span>
+        <span class="absolute inset-0 flex flex-col justify-between p-4">
+          <span class="flex justify-between items-start gap-2"><span class="text-[15px] font-semibold truncate">${esc(card ? shortAcct(n) : n)}</span>${pill}</span>
+          <span class="flex items-center gap-2.5">
+            <span class="block rounded-[5px]" style="width:34px;height:25px;background:linear-gradient(135deg,#E9DFC2,#B7A985);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.75"><path d="M7 9a4.5 4.5 0 0 1 0 6M10.5 6.5a8 8 0 0 1 0 11M14 4a11.5 11.5 0 0 1 0 16"/></svg>
+            ${(st || pays) && mark ? `<span class="ml-auto">${mark}</span>` : ''}
+          </span>
+          <span class="flex justify-between items-end gap-2">
+            <span class="min-w-0"><span class="block text-[11px]" style="opacity:.75">${label}</span><span class="num block text-[22px] leading-tight font-bold tracking-tight" style="color:${amtCol}">${info.asOf ? money(bd.now) : '—'}</span></span>
+            <span class="text-right shrink-0"><span class="num block text-[12px] tracking-[.12em]" style="opacity:.85">${last4(n) ? '•••• ' + esc(last4(n)) : ''}</span>${nw ? `<span class="block text-[10px] font-bold tracking-[.1em] uppercase mt-0.5" style="opacity:.75">${esc(nw)}</span>` : ''}</span>
+          </span>
+          ${lim ? `<span class="block">
+            <span class="block h-[4px] rounded-full" style="background:rgba(255,255,255,.18)"><span class="block h-[4px] rounded-full" style="width:${Math.max(pct, 1).toFixed(1)}%;background:${pct >= 70 ? '#F2937C' : pct >= 30 ? '#F5C77A' : '#7BEBBA'}"></span></span>
+            <span class="num flex justify-between mt-1 text-[10.5px]" style="opacity:.8"><span>${Math.round(pct)}% used</span><span>${money(Math.max(lim - bd.now, 0)).replace('.00', '')} left</span></span></span>` : ''}
+        </span>
+      </button>`;
+  }
   function renderAccountsTab(cash, owed, nBanks, nCards) {
     $('accCash').textContent = nBanks ? money(cash) : '—';
     $('accOwed').textContent = nCards ? money(owed) : '—';
     const all = sortAccts(Array.from(new Set(Object.keys(accounts).concat(transactions.map(t => t.acct || 'Unassigned')))).filter(n => n && n !== 'Unassigned'));
     const cards = all.filter(isCardAcct), banks = all.filter(n => !isCardAcct(n));
     let limSum = 0, owedSum = 0;
-    $('accCards').innerHTML = cards.length ? cards.map(n => {
-      const info = accounts[n] || {}, bd = balanceDetail(n), lim = Number(info.limit) || 0, ink = acctFaceInk(n);
-      if (lim) { limSum += lim; owedSum += Math.max(bd.now, 0); }
-      const st = cardStatus(n), pct = lim ? Math.min(bd.now / lim * 100, 100) : 0;
-      const nw = (catalogEntry(n) || [])[1] || '';
-      return `<button data-acct="${esc(n)}" class="relative block w-full text-left rounded-[16px] overflow-hidden active:scale-[.985] transition-transform" style="aspect-ratio:1.586;background:${acctFaceBg(n)};color:${ink};box-shadow:0 10px 24px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.07)">
-        <span class="absolute inset-0 pointer-events-none" style="background:linear-gradient(115deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.10) 50%,rgba(255,255,255,0) 65%)"></span>
-        <span class="absolute inset-0 flex flex-col justify-between p-[18px]">
-          <span class="flex justify-between items-start gap-3">
-            <span class="text-[17px] font-semibold truncate">${esc(shortAcct(n))}</span>
-            ${st ? `<span class="num text-[12px] font-semibold rounded-[10px] px-2.5 py-1 shrink-0" style="background:rgba(0,0,0,.28);color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.text)}</span>` : ''}
-          </span>
-          <span class="flex items-center gap-3">
-            <span class="block rounded-[6px]" style="width:42px;height:31px;background:linear-gradient(135deg,#E9DFC2,#B7A985);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.75"><path d="M7 9a4.5 4.5 0 0 1 0 6M10.5 6.5a8 8 0 0 1 0 11M14 4a11.5 11.5 0 0 1 0 16"/></svg>
-          </span>
-          <span class="flex justify-between items-end gap-3">
-            <span><span class="block text-[12px]" style="opacity:.75">${info.asOf ? 'Owed' : 'Balance not set'}</span><span class="num block text-[26px] leading-tight font-bold tracking-tight">${info.asOf ? money(bd.now) : '—'}</span></span>
-            <span class="text-right shrink-0"><span class="num block text-[14px] tracking-[.12em]" style="opacity:.85">${last4(n) ? '•••• ' + esc(last4(n)) : ''}</span>${nw ? `<span class="block text-[11px] font-bold tracking-[.1em] uppercase mt-0.5" style="opacity:.75">${esc(nw)}</span>` : ''}</span>
-          </span>
-          ${lim ? `<span class="block">
-            <span class="block h-[4px] rounded-full" style="background:rgba(255,255,255,.18)"><span class="block h-[4px] rounded-full" style="width:${Math.max(pct, 1).toFixed(1)}%;background:${pct >= 70 ? '#F2937C' : pct >= 30 ? '#F5C77A' : '#7BEBBA'}"></span></span>
-            <span class="num flex justify-between mt-1 text-[11px]" style="opacity:.8"><span>${Math.round(pct)}% used</span><span>${money(Math.max(lim - bd.now, 0)).replace('.00', '')} left</span></span></span>` : ''}
-        </span>
-      </button>`;
-    }).join('') : `<p class="px-1 text-[14px] text-muted">No cards yet. Tap + to add one.</p>`;
+    cards.forEach(n => { const lim = Number((accounts[n] || {}).limit) || 0; if (lim) { limSum += lim; owedSum += Math.max(balanceDetail(n).now, 0); } });
+    $('accCards').innerHTML = cards.length ? cards.map(acctFaceHtml).join('') : `<p class="px-1 text-[14px] text-muted">No cards yet. Tap + to add one.</p>`;
     $('accUtil').textContent = limSum ? Math.round(owedSum / limSum * 100) + '% of your limits used' : '';
     $('accBanksSec').classList.toggle('hidden', !banks.length);
-    $('accBanks').innerHTML = banks.map(n => bankRowHtml(n)).join('');
+    $('accBanks').innerHTML = banks.map(acctFaceHtml).join('');
   }
   function bankRowHtml(n) {
     const info = accounts[n] || {}, bd = balanceDetail(n);
     const kind = acctIcon(n) === 'vault' ? 'Savings' : acctIcon(n) === 'swap' ? 'Payment app' : 'Checking';
     const pays = Object.keys(accounts).some(c => isCardAcct(c)) && (settings.primaryAcct === n || defaultFrom() === n);
     return `<button data-acct="${esc(n)}" class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-page">
-        ${acctTile(n, 40, 18, '.65rem')}
+        ${miniCard(n, 48)}
         <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted">${kind}${pays ? ' · pays your cards' : ''}</span></span>
         <span class="num text-[16px] font-semibold shrink-0" style="color:${info.asOf ? (bd.now >= 0 ? '#3CCB8F' : '#F2937C') : '#93A1AE'}">${info.asOf ? money(bd.now) : 'Set balance'}</span>
       </button>`;
@@ -2629,7 +2654,7 @@ tailwind.config = {
   }
 
   // Truly's own greens, teals and blues, biggest slice first.
-  const TRULY_PAL = ['#2BC48A', '#22B3A3', '#2A9FD0', '#3D86E0', '#5A73E6', '#7C66DD', '#4FD1C5', '#8FD9A8'];
+  const TRULY_PAL = ['#2BC48A', '#1A9E73', '#5FE0B0', '#127A5E', '#22B3A3', '#9AF0CF', '#0E5E4C', '#3FC9B9'];
   function donut(segments, total) {
     const size = 200, r = 74, cx = size / 2, cy = size / 2, w = 26;
     const C = 2 * Math.PI * r;
@@ -2678,7 +2703,7 @@ tailwind.config = {
     const top = cats.slice(0, 8);
     const rest = cats.slice(8);
     const legendRows = top.concat(rest.length ? [{ name: 'Everything else', total: rest.reduce((s, c) => s + c.total, 0), n: rest.reduce((s, c) => s + c.n, 0) }] : [])
-      .map((c, i) => Object.assign({}, c, { color: c.name === 'Everything else' ? '#55616D' : TRULY_PAL[i % TRULY_PAL.length] }));
+      .map((c, i) => Object.assign({}, c, { color: c.name === 'Everything else' ? '#3B4651' : TRULY_PAL[i % TRULY_PAL.length] }));
 
     // the merchants that took the most
     const byMerchant = {};
@@ -2954,7 +2979,7 @@ tailwind.config = {
         ? `<span class="num block text-[16px] font-semibold">${money(bd.now)}</span><span class="num block text-[13px] text-muted mt-0.5">${lim ? Math.round(Math.max(bd.now, 0) / lim * 100) + '% used' : 'owed'}</span>`
         : `<span class="num block text-[16px] font-semibold">${money(map[n].out)}</span><span class="block text-[13px] text-muted mt-0.5">spent</span>`;
       return `<button class="w-full text-left flex items-center gap-3 px-4 py-3.5 active:bg-page" data-acct="${esc(n)}">
-          ${acctTile(n, 40, 18, '.65rem')}
+          ${miniCard(n, 48)}
           <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(shortAcct(n))}</span><span class="num block text-[13px] mt-0.5 truncate">${sub}</span></span>
           <span class="text-right shrink-0">${right}</span>
         </button>`;
@@ -5035,7 +5060,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 117';
+  const BUILD = '2026-11-19 · 118';
 
   /* =============================================================
      KEEPING THE DATA
