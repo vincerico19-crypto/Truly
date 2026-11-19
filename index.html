@@ -3639,6 +3639,8 @@ tailwind.config = {
     return names.map(n => ({ name: n, before: before[n], after: after[n], card: isCardAcct(n) }));
   }
 
+  // The amount box grows with what's typed, so nothing gets cut off.
+  function amtWidth(v) { return (Math.max(4, String(v || '0.00').length) + 0.2) + 'ch'; }
   function buildRows() {
     const st = addState, amt = Math.round(Math.abs(Number(st.amount) || 0) * 100) / 100, date = st.date || todayISO();
     if (st.kind === 'card') return [{ id: uid(), date, desc: 'Payment to ' + st.card, payTo: st.card, cat: 'Transfer', acct: st.from, xfer: true, amount: amt }];
@@ -3694,7 +3696,7 @@ tailwind.config = {
       if (minP) chips.splice(1, 0, ['min', 'Minimum', minP]);
       const chip = (k, l, v) => `<button data-amtpick="${k}" data-v="${v}" class="rounded-2xl border ${st.pick === k ? 'border-ledger bg-ledger/10' : 'border-line bg-page/40'} px-3.5 py-3 text-left active:opacity-70"><span class="block text-[16px] font-semibold">${l}</span><span class="num block text-[13px] text-muted">${money(v)}</span></button>`;
       h = ABACK('card') + AH(esc(st.card.replace(/^capital one\s+/i, '')), 'How much?') +
-        `<div class="flex items-center justify-center mt-4"><span class="text-[40px] font-bold text-muted">$</span><input data-addf="amount" type="number" inputmode="decimal" step="0.01" value="${st.amount || ''}" placeholder="0.00" class="num bg-transparent text-left text-[44px] font-bold outline-none" style="width:${Math.max(4, String(st.amount || '0.00').length) * 0.62 + 0.4}em"></div>
+        `<div class="flex items-center justify-center mt-4"><span class="text-[40px] font-bold text-muted">$</span><input data-addf="amount" type="number" inputmode="decimal" step="0.01" value="${st.amount || ''}" placeholder="0.00" class="num bg-transparent text-left text-[44px] font-bold outline-none" style="width:${amtWidth(st.amount)};max-width:86%"></div>
          <div class="grid grid-cols-2 gap-2.5 mt-2">${chips.map(c => chip(...c)).join('')}<button data-amtpick="other" class="rounded-2xl border ${st.pick === 'other' ? 'border-ledger bg-ledger/10' : 'border-line bg-page/40'} px-3.5 py-3 text-left active:opacity-70"><span class="block text-[16px] font-semibold">Other</span><span class="block text-[13px] text-muted">Type an amount</span></button></div>` +
         fromAndDate() + ABTN('review', 'Review payment');
     } else if (st.step === 'other') {
@@ -3703,7 +3705,7 @@ tailwind.config = {
         ? `<select data-addf="to" class="bg-transparent text-right text-[15px] font-medium outline-none">${bankList().filter(n => n !== st.from).map(n => `<option ${n === st.to ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select>`
         : `<input data-addf="to" value="${esc(st.to || '')}" placeholder="${st.kind === 'person' ? 'Name' : 'Car loan, SSFCU LOC…'}" class="bg-transparent text-right text-[15px] font-medium outline-none w-[60%]">`;
       h = ABACK('paidwhat') + AH(title) +
-        `<div class="flex items-center justify-center mt-4"><span class="text-[40px] font-bold text-muted">$</span><input data-addf="amount" type="number" inputmode="decimal" step="0.01" value="${st.amount || ''}" placeholder="0.00" class="num bg-transparent text-left text-[44px] font-bold outline-none" style="width:${Math.max(4, String(st.amount || '0.00').length) * 0.62 + 0.4}em"></div>
+        `<div class="flex items-center justify-center mt-4"><span class="text-[40px] font-bold text-muted">$</span><input data-addf="amount" type="number" inputmode="decimal" step="0.01" value="${st.amount || ''}" placeholder="0.00" class="num bg-transparent text-left text-[44px] font-bold outline-none" style="width:${amtWidth(st.amount)};max-width:86%"></div>
          <label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5"><span class="text-muted text-[15px]">To</span>${toField}</label>` +
         (st.kind === 'person' ? `<label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5"><span class="text-muted text-[15px]">With</span>
           <select data-addf="app" class="bg-transparent text-right text-[15px] font-medium outline-none">${['Zelle', 'Venmo', 'Cash App', 'PayPal', 'Cash'].map(a => `<option ${a === st.app ? 'selected' : ''}>${a}</option>`).join('')}</select></label>` : '') +
@@ -3808,7 +3810,7 @@ tailwind.config = {
     addState[f] = e.target.value;
     if (f === 'q') { $('ncResults').innerHTML = ncResults(); return; }
     if (f === 'name' || f === 'last4') { if (f === 'last4') addState.last4 = String(addState.last4).replace(/\D/g, '').slice(-4); refreshFace(); return; }
-    if (f === 'amount') { addState.pick = 'other'; this.querySelectorAll('[data-amtpick]').forEach(b => { const on = b.getAttribute('data-amtpick') === 'other'; b.classList.toggle('border-ledger', on); b.classList.toggle('bg-ledger/10', on); b.classList.toggle('border-line', !on); b.classList.toggle('bg-page/40', !on); }); }
+    if (f === 'amount') { e.target.style.width = amtWidth(e.target.value); addState.pick = 'other'; this.querySelectorAll('[data-amtpick]').forEach(b => { const on = b.getAttribute('data-amtpick') === 'other'; b.classList.toggle('border-ledger', on); b.classList.toggle('bg-ledger/10', on); b.classList.toggle('border-line', !on); b.classList.toggle('bg-page/40', !on); }); }
   });
   $('addSheet').addEventListener('change', function (e) {
     const f = e.target.getAttribute && e.target.getAttribute('data-addf');
@@ -4673,7 +4675,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 113';
+  const BUILD = '2026-11-18 · 114';
 
   /* =============================================================
      KEEPING THE DATA
