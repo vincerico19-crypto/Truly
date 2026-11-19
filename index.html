@@ -2592,9 +2592,10 @@ tailwind.config = {
     const info = accounts[n] || {};
     const dt = nextDue(info);
     if (!dt) return '';
-    if (duePaidBy(n)) {                            // paid this cycle: no due date shown
+    const pb = duePaidBy(n);
+    if (pb) {                                      // paid this cycle: show what and when
       return `<p class="mt-1.5 pl-[50px]"><span class="text-[12px] font-semibold inline-flex items-center gap-1" style="color:#6FD3A8">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>Paid this cycle</span></p>`;
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>Paid this cycle<span class="num font-medium" style="opacity:.85">\u00a0· ${esc(paidLabel(pb).replace(/^paid /, ''))}</span></span></p>`;
     }
     const col = dueColor(dt);
     const soon = daysUntilDue(dt) <= 10;
@@ -3169,9 +3170,17 @@ tailwind.config = {
   function renderAcctSheet() {
     if (!acctDetail) return;
     const name = acctDetail, color = acctColor(name);
+    const sheetIsBank = acctIcon(name) === 'bank' || acctIcon(name) === 'vault';
+    /* A card also lists the payments you made to it from your bank. They live on
+       the bank's side (that's where the money left), so pull them in here —
+       unless the card's own statement already shows the same payment. */
+    const incoming = sheetIsBank ? [] : transactions.filter(t => t.xfer && t.date.slice(0, 7) === viewMonth &&
+      (t.acct || 'Unassigned') !== name && payTarget(t) === name && !cardSideTwin(name, t));
+    const inSet = new Set(incoming);
     const rows = transactions
       .filter(t => (t.acct || 'Unassigned') === name && t.date.slice(0, 7) === viewMonth)
-      .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0);
+      .concat(incoming)
+      .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : (b.at || 0) - (a.at || 0));
 
     const out = rows.filter(t => t.amount > 0 && !t.xfer).reduce((s, t) => s + t.amount, 0);
     const inn = rows.filter(t => t.amount < 0 && !t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
@@ -3180,6 +3189,7 @@ tailwind.config = {
        payments and refunds take it down. A bank: a transfer's sign says which
        way it went (minus came in, plus went out). */
     const acctIsBank = acctIcon(name) === 'bank' || acctIcon(name) === 'vault';
+    const paidIn = incoming.reduce((s, t) => s + Math.abs(t.amount), 0);
     const xferIn = rows.filter(t => t.xfer && t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
     const xferOut = rows.filter(t => t.xfer && t.amount > 0).reduce((s, t) => s + t.amount, 0);
     const net = acctIsBank ? inn + xferIn - out - xferOut      // change in cash
@@ -3251,7 +3261,7 @@ tailwind.config = {
         <div class="mt-4 space-y-1.5 text-[13px]">
           <div class="flex justify-between"><span class="text-muted">Charged</span><span class="num font-medium">+${money(out)}</span></div>
           ${inn ? `<div class="flex justify-between"><span class="text-muted">Refunds</span><span class="num font-medium text-income">\u2212${money(inn)}</span></div>` : ''}
-          ${paid ? `<div class="flex justify-between"><span class="text-muted">Payments &amp; credits</span><span class="num font-medium" style="color:#4F93D6">\u2212${money(paid)}</span></div>` : ''}
+          ${paid ? `<div class="flex justify-between"><span class="text-muted">${paidIn && paidIn === paid ? 'Payments' : 'Payments &amp; credits'}</span><span class="num font-medium" style="color:#4F93D6">\u2212${money(paid)}</span></div>` : ''}
         </div>`}
         ${paid ? `<p class="text-[12px] text-muted mt-3 leading-relaxed">Payments are money you moved, not money you spent, so they stay out of your budget total.</p>` : ''}
       </div>
@@ -3281,10 +3291,10 @@ tailwind.config = {
       <div class="flex items-center gap-3 px-5 py-3 border-b border-line active:bg-page ${on ? 'bg-page/60' : ''}" data-${selectMode ? 'sel' : 'edit'}="${t.id}">
         ${mark}
         <div class="min-w-0 flex-1">
-          <p class="text-[16px] font-medium truncate">${esc(t.desc)}</p>
-          <p class="num text-[13px] text-muted truncate">${esc(dayLabel(t.date))} · ${t.xfer ? 'Payment' : esc(t.cat)}</p>
+          <p class="text-[16px] font-medium truncate">${inSet.has(t) ? 'Payment' : esc(t.desc)}</p>
+          <p class="num text-[13px] text-muted truncate">${esc(dayLabel(t.date))} · ${inSet.has(t) ? 'from ' + esc(t.acct || 'Unassigned') : t.xfer ? 'Payment' : esc(t.cat)}</p>
         </div>
-        <div class="num text-[16px] font-semibold shrink-0 ${t.amount < 0 && !t.xfer ? 'text-income' : ''}" ${t.xfer ? 'style="color:#4F93D6"' : ''}>${t.xfer ? (t.amount < 0 ? '+' : '') + money(Math.abs(t.amount)) : t.amount < 0 ? '+' + money(Math.abs(t.amount)) : money(t.amount)}</div>
+        <div class="num text-[16px] font-semibold shrink-0 ${t.amount < 0 && !t.xfer ? 'text-income' : ''}" ${t.xfer ? 'style="color:#4F93D6"' : ''}>${inSet.has(t) ? '\u2212' + money(Math.abs(t.amount)) : t.xfer ? (t.amount < 0 ? '+' : '') + money(Math.abs(t.amount)) : t.amount < 0 ? '+' + money(Math.abs(t.amount)) : money(t.amount)}</div>
         ${selectMode ? '' : '<svg class="shrink-0 text-muted -mr-1" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>'}
       </div>`;
     }).join('')
@@ -3683,7 +3693,7 @@ tailwind.config = {
       cards.sort((a, b) => (duePaidBy(a) ? 1 : 0) - (duePaidBy(b) ? 1 : 0) || due(a) - due(b));
       h = ABACK('paidwhat') + AH('Which card?') + (cards.length ? cards.map(n => {
         const owed = balanceDetail(n).now, dt = nextDue(accounts[n] || {});
-        const sub = (last4(n) ? '•• ' + last4(n) + ' · ' : '') + (duePaidBy(n) ? '<span style="color:#6FD3A8">✓ Paid this cycle</span>' : dt ? `<span style="color:${dueColor(dt)}">${esc(dueLabel(dt))}</span>` : 'No due date set');
+        const sub = (last4(n) ? '•• ' + last4(n) + ' · ' : '') + (duePaidBy(n) ? '<span style="color:#6FD3A8">✓ Paid this cycle · ' + esc(paidLabel(duePaidBy(n)).replace(/^paid /, '')) + '</span>' : dt ? `<span style="color:${dueColor(dt)}">${esc(dueLabel(dt))}</span>` : 'No due date set');
         return `<button data-pickcard="${esc(n)}" class="w-full flex items-center gap-3 rounded-2xl border border-line bg-page/40 px-3.5 py-3 mt-2.5 text-left active:opacity-70">
           ${acctTile(n, 44, 19, '.7rem')}
           <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted mt-0.5">${sub}</span></span>
@@ -4675,7 +4685,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 114';
+  const BUILD = '2026-11-18 · 115';
 
   /* =============================================================
      KEEPING THE DATA
