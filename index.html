@@ -124,8 +124,8 @@ tailwind.config = {
     <p class="text-[15px] font-medium text-muted">Truly yours</p>
     <p id="heroNet" class="num text-[44px] leading-[1.1] font-bold tracking-tight mt-1">—</p>
     <p id="heroSub" class="num text-[15px] text-muted mt-1.5"></p>
-    <div id="heroBar" class="hidden mt-4 h-2 rounded-full overflow-hidden flex"></div>
-    <div id="heroBarLbl" class="hidden"></div>
+    <div id="heroBar" class="hidden mt-4 h-2 flex gap-[3px]"></div>
+    <div id="heroBarLbl" class="hidden mt-2.5 justify-between items-center text-[13px] num"></div>
   </section>
   <section id="homeMonth" class="mt-5 bg-card rounded-[20px] border border-line p-[18px]"></section>
   <button id="reviewCard" class="mt-3 w-full text-left rounded-[20px] border border-line bg-card px-4 py-3.5 flex items-center gap-3 active:bg-line">
@@ -2294,14 +2294,26 @@ tailwind.config = {
       const info = accounts[n] || {}, bd = balanceDetail(n), lim = Number(info.limit) || 0, ink = acctFaceInk(n);
       if (lim) { limSum += lim; owedSum += Math.max(bd.now, 0); }
       const st = cardStatus(n), pct = lim ? Math.min(bd.now / lim * 100, 100) : 0;
-      return `<button data-acct="${esc(n)}" class="block w-full text-left rounded-[18px] p-4 active:opacity-80" style="background:${acctFaceBg(n)};color:${ink};box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 1px rgba(255,255,255,.08)">
-        <span class="flex justify-between items-center gap-3"><span class="text-[16px] font-semibold truncate">${esc(shortAcct(n))}</span><span class="num text-[13px] shrink-0" style="opacity:.8">${last4(n) ? '•• ' + esc(last4(n)) : ''}</span></span>
-        <span class="flex justify-between items-end gap-3 mt-4">
-          <span><span class="block text-[12px]" style="opacity:.75">${info.asOf ? 'Owed' : 'Balance not set'}</span><span class="num block text-[24px] font-bold tracking-tight">${info.asOf ? money(bd.now) : '—'}</span></span>
-          ${st ? `<span class="num text-[12px] font-semibold rounded-[10px] px-2.5 py-1.5 shrink-0" style="background:rgba(0,0,0,.28);color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.text)}</span>` : ''}
+      const nw = (catalogEntry(n) || [])[1] || '';
+      return `<button data-acct="${esc(n)}" class="relative block w-full text-left rounded-[16px] overflow-hidden active:scale-[.985] transition-transform" style="aspect-ratio:1.586;background:${acctFaceBg(n)};color:${ink};box-shadow:0 10px 24px -10px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.07)">
+        <span class="absolute inset-0 pointer-events-none" style="background:linear-gradient(115deg,rgba(255,255,255,0) 35%,rgba(255,255,255,.10) 50%,rgba(255,255,255,0) 65%)"></span>
+        <span class="absolute inset-0 flex flex-col justify-between p-[18px]">
+          <span class="flex justify-between items-start gap-3">
+            <span class="text-[17px] font-semibold truncate">${esc(shortAcct(n))}</span>
+            ${st ? `<span class="num text-[12px] font-semibold rounded-[10px] px-2.5 py-1 shrink-0" style="background:rgba(0,0,0,.28);color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.text)}</span>` : ''}
+          </span>
+          <span class="flex items-center gap-3">
+            <span class="block rounded-[6px]" style="width:42px;height:31px;background:linear-gradient(135deg,#E9DFC2,#B7A985);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.75"><path d="M7 9a4.5 4.5 0 0 1 0 6M10.5 6.5a8 8 0 0 1 0 11M14 4a11.5 11.5 0 0 1 0 16"/></svg>
+          </span>
+          <span class="flex justify-between items-end gap-3">
+            <span><span class="block text-[12px]" style="opacity:.75">${info.asOf ? 'Owed' : 'Balance not set'}</span><span class="num block text-[26px] leading-tight font-bold tracking-tight">${info.asOf ? money(bd.now) : '—'}</span></span>
+            <span class="text-right shrink-0"><span class="num block text-[14px] tracking-[.12em]" style="opacity:.85">${last4(n) ? '•••• ' + esc(last4(n)) : ''}</span>${nw ? `<span class="block text-[11px] font-bold tracking-[.1em] uppercase mt-0.5" style="opacity:.75">${esc(nw)}</span>` : ''}</span>
+          </span>
+          ${lim ? `<span class="block">
+            <span class="block h-[4px] rounded-full" style="background:rgba(255,255,255,.18)"><span class="block h-[4px] rounded-full" style="width:${Math.max(pct, 1).toFixed(1)}%;background:${pct >= 70 ? '#F2937C' : pct >= 30 ? '#F5C77A' : '#7BEBBA'}"></span></span>
+            <span class="num flex justify-between mt-1 text-[11px]" style="opacity:.8"><span>${Math.round(pct)}% used</span><span>${money(Math.max(lim - bd.now, 0)).replace('.00', '')} left</span></span></span>` : ''}
         </span>
-        ${lim ? `<span class="block mt-3 h-[5px] rounded-full" style="background:rgba(255,255,255,.18)"><span class="block h-[5px] rounded-full" style="width:${Math.max(pct, 0).toFixed(1)}%;background:${pct >= 70 ? '#F2937C' : pct >= 30 ? '#F5C77A' : '#7BEBBA'}"></span></span>
-          <span class="num flex justify-between mt-1.5 text-[12px]" style="opacity:.8"><span>${Math.round(pct)}% used</span><span>${money(Math.max(lim - bd.now, 0)).replace('.00', '')} left</span></span>` : ''}
       </button>`;
     }).join('') : `<p class="px-1 text-[14px] text-muted">No cards yet. Tap + to add one.</p>`;
     $('accUtil').textContent = limSum ? Math.round(owedSum / limSum * 100) + '% of your limits used' : '';
@@ -2335,10 +2347,13 @@ tailwind.config = {
     const total = cash + owed;
     if (total > 0) {
       const cp = cash / total * 100;
-      bar.innerHTML = (cash > 0 ? `<div style="width:${Math.max(cp, 1.5).toFixed(1)}%;background:#3CCB8F"></div>` : '') +
-                      (owed > 0 ? `<div style="flex:1;background:${cash >= owed ? '#2B4A40' : '#4A2E29'}"></div>` : '');
-      bar.style.background = '#20262D';
-      bar.classList.remove('hidden');
+      const cpR = Math.round(cp), opR = 100 - cpR;
+      bar.innerHTML = (cash > 0 ? `<div class="rounded-full" style="width:${Math.max(cp, 1.5).toFixed(1)}%;background:#3CCB8F"></div>` : '') +
+                      (owed > 0 ? `<div class="rounded-full" style="flex:1;background:#F2937C;opacity:.55"></div>` : '');
+      const dot = c => `<span class="inline-block w-2 h-2 rounded-full" style="background:${c}"></span>`;
+      lbl.innerHTML = `<span class="flex items-center gap-1.5">${dot('#3CCB8F')}<span class="text-muted">Cash</span><span class="font-semibold" style="color:#3CCB8F">${cash > 0 && cpR === 0 ? '<1' : cpR}%</span></span>` +
+        (owed > 0 ? `<span class="flex items-center gap-1.5"><span class="text-muted">Owed</span><span class="font-semibold" style="color:#F2937C">${owed > 0 && opR === 0 ? '<1' : opR}%</span>${dot('#F2937C')}</span>` : '');
+      bar.classList.remove('hidden'); lbl.classList.remove('hidden'); lbl.classList.add('flex');
     } else {
       bar.classList.add('hidden'); lbl.classList.add('hidden'); lbl.classList.remove('flex');
     }
@@ -2555,7 +2570,7 @@ tailwind.config = {
           const over = d.budget > 0 && d.spent > d.budget;
           const on = d.key === viewMonth;
           // green while there is budget left, black once the month goes over
-          const col = over ? '#F2937C' : 'linear-gradient(180deg,#3D8BE0,#2BC48A)';
+          const col = over ? '#EF4444' : 'linear-gradient(180deg,#3D8BE0,#2BC48A)';
           const h = d.spent ? Math.max(8, (d.spent / peak) * 96) : 4;
           return `<button data-month="${d.key}" class="flex-1 flex flex-col items-center gap-1.5 active:opacity-70">
             <span class="num text-[12px] ${on ? 'font-semibold text-ink' : 'text-muted'}">${d.spent ? compact(d.spent) : '–'}</span>
@@ -2613,6 +2628,8 @@ tailwind.config = {
     return positiveCats(Object.keys(map).map(k => ({ name: k, total: map[k], n: counts[k] }))).sort((a, b) => b.total - a.total);
   }
 
+  // Truly's own greens, teals and blues, biggest slice first.
+  const TRULY_PAL = ['#2BC48A', '#22B3A3', '#2A9FD0', '#3D86E0', '#5A73E6', '#7C66DD', '#4FD1C5', '#8FD9A8'];
   function donut(segments, total) {
     const size = 200, r = 74, cx = size / 2, cy = size / 2, w = 26;
     const C = 2 * Math.PI * r;
@@ -2620,14 +2637,14 @@ tailwind.config = {
     const arcs = segments.map(sg => {
       const frac = sg.total / total;
       const len = Math.max(frac * C - 2, 1.5);          // a hairline gap between slices
-      const arc = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${catStyle(sg.name).color}" stroke-width="${w}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" stroke-linecap="butt" transform="rotate(-90 ${cx} ${cy})"></circle>`;
+      const arc = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${sg.color || catStyle(sg.name).color}" stroke-width="${w}" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-offset).toFixed(2)}" stroke-linecap="butt" transform="rotate(-90 ${cx} ${cy})"></circle>`;
       offset += frac * C;
       return arc;
     }).join('');
     return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" role="img" aria-label="Spending by category">
-      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#26313A" stroke-width="${w}"></circle>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#20262D" stroke-width="${w}"></circle>
       ${arcs}
-      <text x="${cx}" y="${cy - 4}" text-anchor="middle" fill="#E9EEF3" font-size="24" font-weight="600" style="font-variant-numeric:tabular-nums">${esc(money(total).replace('.00', ''))}</text>
+      <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="#E9EEF3" font-size="${money(total).length > 9 ? 19 : 22}" font-weight="700" style="font-variant-numeric:tabular-nums">${esc(money(total).replace('.00', ''))}</text>
       <text x="${cx}" y="${cy + 18}" text-anchor="middle" fill="#93A1AE" font-size="12">spent</text>
     </svg>`;
   }
@@ -2660,7 +2677,8 @@ tailwind.config = {
 
     const top = cats.slice(0, 8);
     const rest = cats.slice(8);
-    const legendRows = top.concat(rest.length ? [{ name: 'Everything else', total: rest.reduce((s, c) => s + c.total, 0), n: rest.reduce((s, c) => s + c.n, 0) }] : []);
+    const legendRows = top.concat(rest.length ? [{ name: 'Everything else', total: rest.reduce((s, c) => s + c.total, 0), n: rest.reduce((s, c) => s + c.n, 0) }] : [])
+      .map((c, i) => Object.assign({}, c, { color: c.name === 'Everything else' ? '#55616D' : TRULY_PAL[i % TRULY_PAL.length] }));
 
     // the merchants that took the most
     const byMerchant = {};
@@ -2673,7 +2691,7 @@ tailwind.config = {
 
     $('monthSheetBody').innerHTML = `
       <div class="px-5 py-5 border-b border-line grid place-items-center">
-        ${donut(cats, total)}
+        ${donut(legendRows, total)}
         <div class="mt-3 text-center space-y-1">
           ${budget > 0 ? `<p class="text-[13px] font-semibold" style="color:${total > budget ? '#E2614A' : '#35C08A'}">${total > budget ? money(total - budget) + ' over the ' + money(budget) + ' budget' : money(budget - total) + ' under the ' + money(budget) + ' budget'}</p>` : ''}
           ${delta !== null ? `<p class="text-[13px] text-muted">${delta > 0 ? money(delta) + ' more' : money(-delta) + ' less'} than ${esc(monthShort(prevKey).split(' ')[0])}${deltaPct ? ' (' + deltaPct + '%)' : ''}</p>` : ''}
@@ -2685,10 +2703,10 @@ tailwind.config = {
         <p class="text-[15px] font-bold tracking-tight mb-3">Share of the month</p>
         <div class="space-y-2.5">
           ${legendRows.map(c => {
-            const st = catStyle(c.name);
             const pct = (c.total / total) * 100;
             return `<div class="flex items-center gap-2.5">
-              <span class="shrink-0 rounded-full" style="width:10px;height:10px;background:${st.color}"></span>
+              <span class="shrink-0 rounded-full" style="width:10px;height:10px;background:${c.color}"></span>
+              <span class="shrink-0 w-6 grid place-items-center">${c.name === 'Everything else' ? '' : emojiGlyph(c.name, 17)}</span>
               <span class="text-[14px] truncate flex-1">${esc(c.name)}</span>
               <span class="num text-[12px] text-muted shrink-0 w-9 text-right">${pct < 1 ? '<1' : Math.round(pct)}%</span>
               <span class="num text-[14px] font-semibold shrink-0 w-20 text-right">${money(c.total)}</span>
@@ -2968,7 +2986,7 @@ tailwind.config = {
       if (cb > 0) {
         anyBudget = true;
         const pct = (c.total / cb) * 100, left = cb - c.total;
-        col = pct > 100 ? '#F2937C' : pct >= 75 ? '#E8A54B' : '#3CCB8F';
+        col = pct > 100 ? '#EF4444' : pct >= 75 ? '#E8A54B' : '#3CCB8F';
         w = Math.min(pct, 100);
         line = `<span style="color:${col}">${left >= 0 ? money(left) + ' left of ' + money(cb).replace('.00', '') : money(-left) + ' over ' + money(cb).replace('.00', '')}</span>`;
       } else {
@@ -2984,7 +3002,7 @@ tailwind.config = {
       </button>`;
     }).join('');
     const dot = (c, l) => `<span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:${c}"></span>${l}</span>`;
-    $('catLegend').innerHTML = anyBudget ? dot('#5B9EE0', 'No budget') + dot('#3CCB8F', 'On track') + dot('#E8A54B', 'Close (75%+)') + dot('#F2937C', 'Over') : '';
+    $('catLegend').innerHTML = anyBudget ? dot('#5B9EE0', 'No budget') + dot('#3CCB8F', 'On track') + dot('#E8A54B', 'Close (75%+)') + dot('#EF4444', 'Over') : '';
   }
 
   /* =============================================================
@@ -3545,7 +3563,7 @@ tailwind.config = {
     if (now > 0) rows.push([`All ${esc(cat)}`, money(now) + (cb ? ' of ' + money(cb).replace('.00', '') : '')]);
     if (!rows.length) return '';
     const vs = before > 0 && now > 0 ? `<p class="num text-[13px] mt-1" style="color:${now > before ? '#E8A54B' : '#3CCB8F'}">${esc(cat)} ${now > before ? 'up' : 'down'} ${money(Math.abs(now - before))} vs ${esc(prevName)}</p>` : '';
-    const bar = cb ? `<span class="block h-2 rounded-full mt-1" style="background:#20262D"><span class="block h-2 rounded-full" style="width:${Math.min(now / cb * 100, 100).toFixed(1)}%;background:${now > cb ? '#F2937C' : now / cb >= 0.75 ? '#E8A54B' : '#3CCB8F'}"></span></span>` : '';
+    const bar = cb ? `<span class="block h-2 rounded-full mt-1" style="background:#20262D"><span class="block h-2 rounded-full" style="width:${Math.min(now / cb * 100, 100).toFixed(1)}%;background:${now > cb ? '#EF4444' : now / cb >= 0.75 ? '#E8A54B' : '#3CCB8F'}"></span></span>` : '';
     return `<p class="text-[13px] font-semibold text-muted tracking-wide mb-2.5">${esc(monthName.toUpperCase())}</p>
       <div class="rounded-[18px] bg-page/60 border border-line p-4 space-y-2.5">
         ${rows.map(r => `<div class="flex justify-between gap-3 text-[15px]"><span class="text-muted truncate">${r[0]}</span><span class="num font-semibold shrink-0">${r[1]}</span></div>`).join('')}
@@ -5017,7 +5035,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 116';
+  const BUILD = '2026-11-18 · 117';
 
   /* =============================================================
      KEEPING THE DATA
