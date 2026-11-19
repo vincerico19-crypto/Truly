@@ -1328,6 +1328,9 @@ tailwind.config = {
       if (MARKETING.test(t)) return null;
       const letters = (t.match(/[a-z]/gi) || []).length;
       // Short store names are real: "H&M", "A&W", "BP", "QT".
+      /* Live Text misreads the row arrows and icons as junk like "< OZZ" or
+         "LLLZ". A few letters behind an arrow, or one letter tripled, is noise. */
+      if (letters <= 6 && (/^\s*[<>‹›»«]/.test(t) || /([A-Za-z])\1\1/.test(t)) && !hasMoney) return null;
       const shortName = /^\s*[A-Za-z]{1,3}\s?&\s?[A-Za-z]{1,3}\s*$/.test(t) || (/^\s*[A-Z]{2}\s*$/.test(t) && !/^\s*(OK|AM|PM|US|TX|CA|NY|FL|ID|NO|GO)\s*$/.test(t));
       if (letters < 3 && !shortName && !(hasMoney || /^\s*-?\d[\d,]*\.\d{2}\s*$/.test(t))) return null;
       return { s: t, hasMoney: hasMoney };
@@ -4670,7 +4673,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-18 · 112';
+  const BUILD = '2026-11-18 · 113';
 
   /* =============================================================
      KEEPING THE DATA
