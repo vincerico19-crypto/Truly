@@ -64,6 +64,7 @@ tailwind.config = {
   .brand-tru { background: linear-gradient(100deg, #40E296 0%, #36BCD0 100%); -webkit-background-clip: text; background-clip: text; }
   .brand-y { background: linear-gradient(100deg, #34A8E8 0%, #3C8CFF 100%); -webkit-background-clip: text; background-clip: text; }
   .brand-grad { background: linear-gradient(135deg, #1F9E6E 0%, #1E8FB8 60%, #2F7FE8 100%) !important; }
+  .brand-text { background: linear-gradient(90deg, #2BC48A, #3D8BE0); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .brand-glow { box-shadow: 0 6px 22px -6px rgba(47,127,232,.55), 0 2px 8px -2px rgba(31,158,110,.5); }
 </style>
 </head>
@@ -561,6 +562,7 @@ tailwind.config = {
   let incomes = { default: 0 };    // what you expect to bring in, per month
   let settings = { countDeposits: true, primaryAcct: '' };
   let acctFilter = 'All';
+  let monthShowAll = false;
   let typeFilter = 'all';          // Activity: all | spend | in | pay | check
   let balFocus = null;             // Accounts: show one account's balance form
   let showAcctChips = false;
@@ -2611,6 +2613,7 @@ tailwind.config = {
 
   function openMonthSheet(key) {
     monthDetail = key;
+    monthShowAll = false;
     renderMonthSheet();
     openSheet($('monthSheet'));
   }
@@ -2713,38 +2716,50 @@ tailwind.config = {
     });
     const merchants = positiveCats(Object.values(byMerchant)).sort((a, b) => b.total - a.total).slice(0, 5);
 
+    // Fill-up rows: each row is its own bar, sized against the biggest category.
+    const peak = cats.length ? cats[0].total : 1;
+    const shown = monthShowAll ? cats : cats.slice(0, 7);
+    const pill = delta !== null ? `<span class="num inline-flex items-center text-[13px] font-semibold rounded-xl px-2.5 py-1" style="background:${delta > 0 ? '#3A1B1B' : '#15302A'};color:${delta > 0 ? '#FF8A8A' : '#6EE7B7'}">${delta > 0 ? '▲' : '▼'} ${money(Math.abs(delta))}${deltaPct ? ' (' + deltaPct + '%)' : ''} vs ${esc(monthShort(prevKey).split(' ')[0])}</span>` : '';
+    const rowHtml = c => {
+      const cb = catBudget(c.name), w = Math.max(c.total / peak * 100, 3);
+      let fill = 'linear-gradient(90deg,rgba(43,196,138,.40),rgba(61,139,224,.26))', ring = '', sub = '';
+      if (cb > 0) {
+        const left = cb - c.total, pct = c.total / cb;
+        if (left < 0) { fill = 'linear-gradient(90deg,rgba(239,68,68,.46),rgba(239,68,68,.22))'; ring = 'box-shadow:inset 0 0 0 1.5px rgba(239,68,68,.6);'; sub = `<span class="num block text-[12px]" style="color:#FF8A8A">${money(-left)} over</span>`; }
+        else if (pct >= 0.75) { fill = 'linear-gradient(90deg,rgba(232,165,75,.42),rgba(232,165,75,.22))'; sub = `<span class="num block text-[12px]" style="color:#F5C77A">${money(left)} left</span>`; }
+        else sub = `<span class="num block text-[12px]" style="color:#8FD9B6">${money(left)} left</span>`;
+      }
+      const pct = (c.total / total) * 100;
+      return `<button data-mcat="${esc(c.name)}" class="relative block w-full h-[58px] rounded-2xl overflow-hidden text-left active:opacity-80" style="background:#1E252C;${ring}">
+          <span class="absolute inset-y-0 left-0" style="width:${w.toFixed(1)}%;background:${fill}"></span>
+          <span class="relative h-full flex items-center gap-3 px-4">
+            <span class="w-7 grid place-items-center shrink-0">${emojiGlyph(c.name, 22)}</span>
+            <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(c.name)}</span>${sub}</span>
+            <span class="num text-[13px] text-muted shrink-0">${pct < 1 ? '<1' : Math.round(pct)}%</span>
+            <span class="num text-[16px] font-bold shrink-0 w-[92px] text-right">${money(c.total)}</span>
+          </span>
+        </button>`;
+    };
+
     $('monthSheetBody').innerHTML = `
-      <div class="px-5 py-5 border-b border-line grid place-items-center">
-        ${donut(legendRows, total)}
-        <div class="mt-3 text-center space-y-1">
-          ${budget > 0 ? `<p class="text-[13px] font-semibold" style="color:${total > budget ? '#E2614A' : '#35C08A'}">${total > budget ? money(total - budget) + ' over the ' + money(budget) + ' budget' : money(budget - total) + ' under the ' + money(budget) + ' budget'}</p>` : ''}
-          ${delta !== null ? `<p class="text-[13px] text-muted">${delta > 0 ? money(delta) + ' more' : money(-delta) + ' less'} than ${esc(monthShort(prevKey).split(' ')[0])}${deltaPct ? ' (' + deltaPct + '%)' : ''}</p>` : ''}
-          ${moneyIn ? `<p class="text-[13px] text-muted">${money(moneyIn)} came in${moved ? ' · ' + money(moved) + ' moved between accounts' : ''}</p>` : ''}
+      <div class="px-5 pt-4 pb-2">
+        <p class="text-[14px] text-muted">Spent</p>
+        <p class="num text-[40px] leading-none font-extrabold tracking-tight mt-1 brand-text">${money(total)}</p>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          ${pill}
+          ${budget > 0 ? `<span class="num text-[13px] font-semibold rounded-xl px-2.5 py-1" style="background:${total > budget ? '#3A1B1B' : '#15302A'};color:${total > budget ? '#FF8A8A' : '#6EE7B7'}">${total > budget ? money(total - budget) + ' over budget' : money(budget - total) + ' under budget'}</span>` : ''}
+          ${moneyIn ? `<span class="num text-[13px] text-muted">${money(moneyIn)} came in</span>` : ''}
         </div>
       </div>
+      <div class="px-5 pt-3 pb-4 space-y-2">${shown.map(rowHtml).join('')}</div>
+      ${cats.length > 7 ? `<div class="px-5 pb-4 -mt-1 text-center"><button data-mshowall class="h-11 px-4 text-[15px] font-medium active:opacity-60" style="color:#6FB0EE">${monthShowAll ? 'Show less' : '+ ' + (cats.length - 7) + ' more categor' + (cats.length - 7 === 1 ? 'y' : 'ies')}</button></div>` : ''}
 
-      <div class="px-5 py-4 border-b border-line">
-        <p class="text-[15px] font-bold tracking-tight mb-3">Share of the month</p>
-        <div class="space-y-2.5">
-          ${legendRows.map(c => {
-            const pct = (c.total / total) * 100;
-            return `<div class="flex items-center gap-2.5">
-              <span class="shrink-0 rounded-full" style="width:10px;height:10px;background:${c.color}"></span>
-              <span class="shrink-0 w-6 grid place-items-center">${c.name === 'Everything else' ? '' : emojiGlyph(c.name, 17)}</span>
-              <span class="text-[14px] truncate flex-1">${esc(c.name)}</span>
-              <span class="num text-[12px] text-muted shrink-0 w-9 text-right">${pct < 1 ? '<1' : Math.round(pct)}%</span>
-              <span class="num text-[14px] font-semibold shrink-0 w-20 text-right">${money(c.total)}</span>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-
-      ${merchants.length ? `<div class="px-5 py-4">
+      ${merchants.length ? `<div class="px-5 py-4 border-t border-line">
         <p class="text-[15px] font-bold tracking-tight mb-3">Where it went most</p>
         <div class="space-y-2.5">
           ${merchants.map(m => `<div class="flex items-center gap-2.5">
-            <span class="text-[14px] truncate flex-1">${esc(m.name)}</span>
-            <span class="num text-[12px] text-muted shrink-0">${m.n}\u00d7</span>
+            <span class="text-[14px] truncate flex-1">${esc(niceDesc(m.name))}</span>
+            <span class="num text-[12px] text-muted shrink-0">${m.n}×</span>
             <span class="num text-[14px] font-semibold shrink-0 w-20 text-right">${money(m.total)}</span>
           </div>`).join('')}
         </div>
@@ -4503,6 +4518,15 @@ tailwind.config = {
     const btn = e.target.closest('[data-cat]');
     if (btn) openCatSheet(btn.getAttribute('data-cat'));
   });
+  $('monthSheetBody').addEventListener('click', function (e) {
+    if (e.target.closest('[data-mshowall]')) { monthShowAll = !monthShowAll; renderMonthSheet(); return; }
+    const row = e.target.closest('[data-mcat]');
+    if (!row || !monthDetail) return;
+    const name = row.getAttribute('data-mcat');
+    if (viewMonth !== monthDetail) { viewMonth = monthDetail; render(); }
+    closeSheets();
+    setTimeout(() => openCatSheet(name), 30);
+  });
   $('catSheetBody').addEventListener('click', function (e) {
     if (e.target.closest('[data-savecatbudget]')) {
       const v = parseFloat(($('catBudgetInput') || {}).value);
@@ -5059,7 +5083,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-19 · 119';
+  const BUILD = '2026-11-19 · 120';
 
   /* =============================================================
      KEEPING THE DATA
