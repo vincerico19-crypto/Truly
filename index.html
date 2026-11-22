@@ -606,7 +606,8 @@ tailwind.config = {
     fixRewards();
     fixZelle();
     const seeded = seedNewAccounts122();
-    if (merged || firstRun || seeded) save();
+    const looked = fixLooks123();
+    if (merged || firstRun || seeded || looked) save();
   }
 
   /* "Frost" beside "Frost Bank": a short name with no balance of its own that
@@ -634,6 +635,15 @@ tailwind.config = {
   // Build 122: one-time add of the Quicksilver card and the SSFCU PrimeLine line of
   // credit, as their apps showed them on Nov 21. Only for this Truly (has Frost Bank),
   // and never over an account that is already there.
+  function fixLooks123() {
+    if (settings.looks123) return false;
+    settings.looks123 = true;
+    const qs = Object.keys(accounts).find(n => /quicksilver/i.test(n));
+    if (qs) { accounts[qs].network = 'Mastercard'; delete accounts[qs].look; }
+    const loc = Object.keys(accounts).find(n => /primeline/i.test(n));
+    if (loc) { accounts[loc].kind = 'loc'; delete accounts[loc].look; }
+    return true;
+  }
   function seedNewAccounts122() {
     if (settings.seed122) return false;
     settings.seed122 = true;
@@ -1079,9 +1089,24 @@ tailwind.config = {
       svg: '<path d="M7 3.5v5.2a2 2 0 0 0 4 0V3.5M9 3.5v17"/><path d="M16.5 3.5c-1.6 1.4-2.4 3.5-2.4 6.2V13h2.4v7.5"/>' },
     { re: /\b(amex|american express|blue cash)\b/i, bg: ['#0E3558', '#2F93E0'], fg: '#EAF6FF',
       svg: '<path d="M5.5 15.5V12.5a6.5 6.5 0 0 1 13 0"/><path d="M18.5 12.5h-4.2v7"/><path d="M5.5 15.5 4 18"/><path d="M7.4 7.4C8.6 3.4 15.2 2.6 17.6 6" stroke-width="2.6"/><path d="M10 12.5h2.2"/>' },
+    // Brushed slate-to-silver, with a drop of quicksilver.
+    { re: /\bquicksilver\b/i, bg: ['#4A5A72', '#AFBDCB'], fg: '#F4F7FB', metal: true,
+      svg: '<path d="M12 3.6c3.1 4 5.6 7.3 5.6 10.3a5.6 5.6 0 0 1-11.2 0c0-3 2.5-6.3 5.6-10.3z"/><path d="M9.5 14.3a2.7 2.7 0 0 0 2.3 2.7" stroke-width="1.4"/>' },
+    // Credit-union navy with a plain star.
+    { re: /\b(primeline|ssfcu|security service)\b/i, bg: ['#0A1A5C', '#2F5FC4'], fg: '#EAF0FF',
+      svg: '<path d="M12 3.8l2.45 5 5.45.6-4.05 3.75 1.1 5.35L12 15.75 7.05 18.5l1.1-5.35L4.1 9.4l5.45-.6z" stroke-width="1.6"/>' },
     { re: /\bfrost\b/i, bg: ['#0D2238', '#2B6CA8'], fg: '#DDF1FF',
       svg: [0, 60, 120, 180, 240, 300].map(a => `<g transform="rotate(${a} 12 12)">${flakeArm}</g>`).join('') },
   ];
+
+  // Cards and banks without their own art get a thin monogram, so every tile looks alike.
+  function monoMark(name, size, color) {
+    let base = shortAcct(name);
+    if (/^(credit union|checking|savings|bank|platinum|cashrewards)\b/i.test(base)) base = String(name);
+    const trimmed = base.replace(/\b(credit union|fcu|cu|bank|checking|savings|federal)\b/gi, ' ').trim();
+    const ini = initials(trimmed || base) || '•';
+    return `<span style="font-weight:300;font-size:${Math.round(size * (ini.length > 1 ? 0.78 : 1))}px;line-height:1;letter-spacing:.04em;color:${color}">${esc(ini)}</span>`;
+  }
   function cardArt(name) { return CARD_ART.find(a => a.re.test(String(name || ''))) || null; }
   // The tile beside an account everywhere it is listed.
   function acctTile(name, box, px, radius) {
@@ -2268,11 +2293,12 @@ tailwind.config = {
     w = w || 46; const h = Math.round(w / 1.586);
     const info = accounts[name] || {}, art = cardArt(name), look = info.look;
     let mark = '';
-    if (look && look.icon) mark = look.icon === 'initials'
+    if (look && (!look.icon || look.icon === '🏦' || look.icon === '🐷')) mark = monoMark(name, Math.round(h * 0.52), look.letter && LETTER[look.letter] ? LETTER[look.letter] : (look.letter || '#F3F6FA'));
+    else if (look && look.icon) mark = look.icon === 'initials'
       ? `<span style="font-weight:700;font-size:${Math.round(h * 0.38)}px;color:${look.letter}">${esc(initials(name))}</span>`
       : `<span style="font-size:${Math.round(h * 0.5)}px;line-height:1;font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">${look.icon}</span>`;
     else if (art) mark = `<svg width="${Math.round(h * 0.62)}" height="${Math.round(h * 0.62)}" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${art.svg}</svg>`;
-    else mark = iconSvg(acctIcon(name), acctFaceInk(name), Math.round(h * 0.45));
+    else mark = monoMark(name, Math.round(h * 0.52), acctFaceInk(name));
     const sheen = 'linear-gradient(115deg,rgba(255,255,255,0) 38%,rgba(255,255,255,.14) 52%,rgba(255,255,255,0) 66%),';
     return `<span class="shrink-0 relative block rounded-[6px] overflow-hidden" style="width:${w}px;height:${h}px;background:${sheen}${acctFaceBg(name)};box-shadow:0 2px 6px -2px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(255,255,255,.08)">
         <span class="absolute inset-0 grid place-items-center">${mark}</span>
@@ -2345,10 +2371,10 @@ tailwind.config = {
     const st = card ? cardStatus(n) : null, pct = lim ? Math.min(bd.now / lim * 100, 100) : 0;
     const nw = card ? (info.kind === 'loc' ? 'Line of credit' : (info.network || (catalogEntry(n) || [])[1] || '')) : (acctIcon(n) === 'vault' ? 'Savings' : 'Debit');
     const art = cardArt(n);
-    const mark = art ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.9">${art.svg}</svg>` : '';
+    const mark = art ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.9">${art.svg}</svg>` : monoMark(n, 20, ink);
     const pays = !card && (settings.primaryAcct === n || defaultFrom() === n) && Object.keys(accounts).some(isCardAcct);
     const pill = st ? `<span class="num text-[11px] font-semibold rounded-[9px] px-2 py-1 shrink-0" style="background:rgba(0,0,0,.28);color:${st.ok ? '#8EF0C3' : st.col}">${esc(st.text)}</span>`
-      : pays ? `<span class="text-[11px] font-semibold rounded-[9px] px-2 py-1 shrink-0" style="background:rgba(0,0,0,.25)">Pays your cards</span>` : mark;
+      : pays ? `<span class="text-[11px] font-semibold rounded-[9px] px-2 py-1 shrink-0" style="background:rgba(0,0,0,.25)">Pays your cards</span>` : '';
     const label = !info.asOf ? 'Balance not set' : card ? 'Owed' : 'Available';
     const amtCol = card ? 'inherit' : (bd.now >= 0 ? '#9BF5CF' : '#FFB4A6');
     return `<button data-acct="${esc(n)}" class="relative block w-full max-w-[318px] mx-auto text-left rounded-[14px] overflow-hidden active:scale-[.985] transition-transform" style="aspect-ratio:1.586;background:${acctFaceBg(n)};color:${ink};box-shadow:0 10px 22px -10px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 0 1px rgba(255,255,255,.07)">
@@ -2358,7 +2384,7 @@ tailwind.config = {
           <span class="flex items-center gap-2.5">
             <span class="block rounded-[5px]" style="width:34px;height:25px;background:linear-gradient(135deg,#E9DFC2,#B7A985);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.75"><path d="M7 9a4.5 4.5 0 0 1 0 6M10.5 6.5a8 8 0 0 1 0 11M14 4a11.5 11.5 0 0 1 0 16"/></svg>
-            ${(st || pays) && mark ? `<span class="ml-auto">${mark}</span>` : ''}
+            ${mark ? `<span class="ml-auto">${mark}</span>` : ''}
           </span>
           <span class="flex justify-between items-end gap-2">
             <span class="min-w-0"><span class="block text-[11px]" style="opacity:.75">${label}</span><span class="num block text-[22px] leading-tight font-bold tracking-tight" style="color:${amtCol}">${info.asOf ? money(bd.now) : '—'}</span></span>
@@ -3882,7 +3908,8 @@ tailwind.config = {
     ['Capital One VentureOne', 'Mastercard', '#C5CBD3', '#8D95A1', 'matte', 'black'],
     ['Capital One Savor', 'Mastercard', '#B2532E', '#3A1C12', 'metal', 'white'],
     ['Capital One SavorOne', 'Mastercard', '#C46A3E', '#5A2A16', 'matte', 'white'],
-    ['Capital One Quicksilver', 'Visa', '#C5CBD3', '#7D8590', 'metal', 'black'],
+    ['Capital One Quicksilver', 'Mastercard', '#AFBDCB', '#4A5A72', 'metal', 'white'],
+    ['Capital One QuicksilverOne', 'Mastercard', '#AFBDCB', '#4A5A72', 'metal', 'white'],
     ['Capital One Platinum', 'Mastercard', '#9AA3AE', '#4C535C', 'matte', 'white'],
     ['Chase Sapphire Reserve', 'Visa', '#1A2A44', '#070D18', 'metal', 'silver'],
     ['Chase Sapphire Preferred', 'Visa', '#123A6B', '#081A33', 'metal', 'silver'],
@@ -3914,7 +3941,21 @@ tailwind.config = {
     ['Navy Federal More Rewards', 'Visa', '#1F6B5A', '#0B2E27', 'glossy', 'white'],
     ['USAA Cashback Rewards Plus', 'Visa', '#1C3B6E', '#0B1A33', 'matte', 'white'],
     ['PenFed Power Cash', 'Visa', '#2E86E0', '#123A6B', 'gradient', 'white'],
-    ['Security Service FCU Visa', 'Visa', '#123A6B', '#2E86E0', 'gradient', 'white'],
+    ['Security Service FCU Visa', 'Visa', '#2F5FC4', '#0A1A5C', 'gradient', 'white'],
+    ['SSFCU PrimeLine', 'Line of credit', '#2F5FC4', '#0A1A5C', 'gradient', 'white'],
+    ['RBFCU Visa', 'Visa', '#1F6B5A', '#0B2E27', 'gradient', 'white'],
+    ['Navy Federal Platinum', 'Visa', '#123A6B', '#081A33', 'glossy', 'white'],
+    ['PenFed Platinum Rewards', 'Visa', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Alliant Cashback Visa', 'Visa', '#35C08A', '#1F6B5A', 'gradient', 'white'],
+    ['Credit Union Line of Credit', 'Line of credit', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Discover it Chrome', 'Discover', '#9AA3AE', '#4C535C', 'metal', 'black'],
+    ['Chase Slate Edge', 'Visa', '#3A3F46', '#16191D', 'matte', 'white'],
+    ['Wells Fargo Reflect', 'Visa', '#3A3F46', '#16191D', 'matte', 'white'],
+    ['Citi Simplicity', 'Mastercard', '#2E86E0', '#123A6B', 'gradient', 'white'],
+    ['Capital One Platinum Secured', 'Mastercard', '#9AA3AE', '#4C535C', 'matte', 'white'],
+    ['Discover it Secured', 'Discover', '#F28A2E', '#C9561A', 'gradient', 'white'],
+    ['Petal 2', 'Visa', '#15181C', '#000000', 'matte', 'white'],
+    ['Mission Lane Visa', 'Visa', '#2BB0C9', '#0E4A57', 'gradient', 'white'],
     ['Target Circle Card', 'Mastercard', '#D9483B', '#8A1E16', 'glossy', 'white'],
     ['Walmart Rewards Card', 'Mastercard', '#2E86E0', '#123A6B', 'gradient', 'white'],
     ['Amazon Store Card', 'Store card', '#2B2F37', '#0E1013', 'matte', 'white'],
@@ -3940,8 +3981,23 @@ tailwind.config = {
     ['PNC', 'checking', '#F28A2E', '#5A2A16'], ['Truist', 'checking', '#7A4FD6', '#3A2370'],
     ['Charles Schwab', 'checking', '#2E86E0', '#123A6B'], ['Cash', 'checking', '#35C08A', '#1F6B5A'],
   ];
+  // The long list: banks and credit unions people pick from when adding an account.
+  const MORE_BANKS = [["Chase", "checking", "#2F5FC4", "#0A1A5C"], ["Bank of America", "checking", "#F28A2E", "#5A2A16"], ["Wells Fargo", "checking", "#45B39D", "#18493F"], ["Citibank", "checking", "#2E86E0", "#123A6B"], ["US Bank", "checking", "#B8285C", "#5C1230"], ["PNC Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Truist", "checking", "#3A3F46", "#16191D"], ["Capital One", "checking", "#B8285C", "#5C1230"], ["TD Bank", "checking", "#3A3F46", "#16191D"], ["Fifth Third Bank", "checking", "#D9483B", "#7A1F18"], ["KeyBank", "checking", "#1C3B6E", "#0B1A33"], ["Huntington Bank", "checking", "#45B39D", "#18493F"], ["Regions Bank", "checking", "#2E86E0", "#123A6B"], ["M&T Bank", "checking", "#1C3B6E", "#0B1A33"], ["Citizens Bank", "checking", "#C9A04A", "#5C4714"], ["First Citizens Bank", "checking", "#2BB0C9", "#0E4A57"], ["BMO", "checking", "#2BB0C9", "#0E4A57"], ["Santander Bank", "checking", "#F28A2E", "#5A2A16"], ["HSBC", "checking", "#7A4FD6", "#3A2370"], ["Comerica", "checking", "#3A3F46", "#16191D"], ["Zions Bank", "checking", "#F28A2E", "#5A2A16"], ["BOK Financial", "checking", "#2F5FC4", "#0A1A5C"], ["Texas Capital Bank", "checking", "#7A4FD6", "#3A2370"], ["Prosperity Bank", "checking", "#D9483B", "#7A1F18"], ["Broadway Bank", "checking", "#F28A2E", "#5A2A16"], ["Woodforest National Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Amegy Bank", "checking", "#7A4FD6", "#3A2370"], ["Cadence Bank", "checking", "#7A4FD6", "#3A2370"], ["Hancock Whitney", "checking", "#45B39D", "#18493F"], ["Synovus", "checking", "#D9483B", "#7A1F18"], ["First Horizon", "checking", "#2BB0C9", "#0E4A57"], ["Associated Bank", "checking", "#45B39D", "#18493F"], ["Webster Bank", "checking", "#35C08A", "#1F6B5A"], ["Old National Bank", "checking", "#F28A2E", "#5A2A16"], ["Arvest Bank", "checking", "#D9483B", "#7A1F18"], ["UMB Bank", "checking", "#35C08A", "#1F6B5A"], ["Commerce Bank", "checking", "#7A4FD6", "#3A2370"], ["First National Bank", "checking", "#7A4FD6", "#3A2370"], ["Frost Bank", "checking", "#2E86E0", "#123A6B"], ["Jefferson Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Vantage Bank Texas", "checking", "#3A3F46", "#16191D"], ["Texas Regional Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Extraco Banks", "checking", "#C9A04A", "#5C4714"], ["American National Bank of Texas", "checking", "#F28A2E", "#5A2A16"], ["First Financial Bank", "checking", "#C9A04A", "#5C4714"], ["Independent Bank", "checking", "#2BB0C9", "#0E4A57"], ["Happy State Bank", "checking", "#1C3B6E", "#0B1A33"], ["Inwood National Bank", "checking", "#2E86E0", "#123A6B"], ["Plains Capital Bank", "checking", "#D9483B", "#7A1F18"], ["Simmons Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Bank OZK", "checking", "#B8285C", "#5C1230"], ["Valley Bank", "checking", "#1C3B6E", "#0B1A33"], ["East West Bank", "checking", "#2E86E0", "#123A6B"], ["Cathay Bank", "checking", "#B8285C", "#5C1230"], ["Banner Bank", "checking", "#B8285C", "#5C1230"], ["Umpqua Bank", "checking", "#7A4FD6", "#3A2370"], ["Glacier Bank", "checking", "#3A3F46", "#16191D"], ["Pinnacle Bank", "checking", "#3A3F46", "#16191D"], ["Ally Bank", "checking", "#1C3B6E", "#0B1A33"], ["Marcus by Goldman Sachs", "checking", "#45B39D", "#18493F"], ["SoFi", "checking", "#C9A04A", "#5C4714"], ["Chime", "checking", "#7A4FD6", "#3A2370"], ["Varo Bank", "checking", "#1C3B6E", "#0B1A33"], ["Current", "checking", "#D9483B", "#7A1F18"], ["Discover Bank", "checking", "#2BB0C9", "#0E4A57"], ["American Express Savings", "checking", "#2F5FC4", "#0A1A5C"], ["Synchrony Bank", "checking", "#45B39D", "#18493F"], ["Barclays", "checking", "#1C3B6E", "#0B1A33"], ["Charles Schwab Bank", "checking", "#45B39D", "#18493F"], ["Fidelity Cash Management", "checking", "#3A3F46", "#16191D"], ["Wealthfront Cash", "checking", "#45B39D", "#18493F"], ["Betterment Cash", "checking", "#2F5FC4", "#0A1A5C"], ["Axos Bank", "checking", "#2E86E0", "#123A6B"], ["CIT Bank", "checking", "#2E86E0", "#123A6B"], ["LendingClub Bank", "checking", "#45B39D", "#18493F"], ["Upgrade", "checking", "#C9A04A", "#5C4714"], ["One Finance", "checking", "#2BB0C9", "#0E4A57"], ["Dave", "checking", "#C9A04A", "#5C4714"], ["Revolut", "checking", "#2BB0C9", "#0E4A57"], ["Apple Savings", "checking", "#B8285C", "#5C1230"], ["Bask Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Live Oak Bank", "checking", "#2F5FC4", "#0A1A5C"], ["Quontic Bank", "checking", "#1C3B6E", "#0B1A33"], ["Navy Federal Credit Union", "checking", "#7A4FD6", "#3A2370"], ["PenFed Credit Union", "checking", "#2E86E0", "#123A6B"], ["USAA", "checking", "#45B39D", "#18493F"], ["Security Service FCU", "checking", "#F28A2E", "#5A2A16"], ["Randolph-Brooks FCU", "checking", "#45B39D", "#18493F"], ["Alliant Credit Union", "checking", "#D9483B", "#7A1F18"], ["BECU", "checking", "#2E86E0", "#123A6B"], ["SchoolsFirst FCU", "checking", "#C9A04A", "#5C4714"], ["Golden 1 Credit Union", "checking", "#D9483B", "#7A1F18"], ["State Employees' Credit Union", "checking", "#45B39D", "#18493F"], ["America First Credit Union", "checking", "#45B39D", "#18493F"], ["Mountain America Credit Union", "checking", "#2E86E0", "#123A6B"], ["First Tech FCU", "checking", "#2F5FC4", "#0A1A5C"], ["Suncoast Credit Union", "checking", "#C9A04A", "#5C4714"], ["Digital FCU", "checking", "#3A3F46", "#16191D"], ["Patelco Credit Union", "checking", "#1C3B6E", "#0B1A33"], ["Star One Credit Union", "checking", "#35C08A", "#1F6B5A"], ["Redwood Credit Union", "checking", "#2F5FC4", "#0A1A5C"], ["OnPoint Community CU", "checking", "#2E86E0", "#123A6B"], ["Teachers FCU", "checking", "#35C08A", "#1F6B5A"], ["GreenState Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Global Credit Union", "checking", "#3A3F46", "#16191D"], ["Lake Michigan Credit Union", "checking", "#7A4FD6", "#3A2370"], ["VyStar Credit Union", "checking", "#2F5FC4", "#0A1A5C"], ["Delta Community Credit Union", "checking", "#B8285C", "#5C1230"], ["Bethpage FCU", "checking", "#B8285C", "#5C1230"], ["Visions FCU", "checking", "#35C08A", "#1F6B5A"], ["Affinity Plus FCU", "checking", "#35C08A", "#1F6B5A"], ["Members 1st FCU", "checking", "#45B39D", "#18493F"], ["Desert Financial CU", "checking", "#45B39D", "#18493F"], ["Wright-Patt Credit Union", "checking", "#45B39D", "#18493F"], ["Ent Credit Union", "checking", "#45B39D", "#18493F"], ["Logix FCU", "checking", "#3A3F46", "#16191D"], ["San Diego County Credit Union", "checking", "#B8285C", "#5C1230"], ["Hughes FCU", "checking", "#45B39D", "#18493F"], ["Pentagon FCU", "checking", "#B8285C", "#5C1230"], ["Air Force FCU", "checking", "#D9483B", "#7A1F18"], ["Andrews FCU", "checking", "#F28A2E", "#5A2A16"], ["Army Aviation Center FCU", "checking", "#45B39D", "#18493F"], ["Generations FCU", "checking", "#45B39D", "#18493F"], ["Credit Human", "checking", "#45B39D", "#18493F"], ["Firstmark Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Kelly Community FCU", "checking", "#2BB0C9", "#0E4A57"], ["TDECU", "checking", "#1C3B6E", "#0B1A33"], ["Texas Trust Credit Union", "checking", "#2E86E0", "#123A6B"], ["Amplify Credit Union", "checking", "#C9A04A", "#5C4714"], ["University FCU", "checking", "#1C3B6E", "#0B1A33"], ["A+ FCU", "checking", "#7A4FD6", "#3A2370"], ["Greater Texas Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Credit Union of Texas", "checking", "#B8285C", "#5C1230"], ["Smart Financial Credit Union", "checking", "#C9A04A", "#5C4714"], ["Texans Credit Union", "checking", "#2F5FC4", "#0A1A5C"], ["Coastal Community FCU", "checking", "#F28A2E", "#5A2A16"], ["Members Choice Credit Union", "checking", "#2E86E0", "#123A6B"], ["Houston Police FCU", "checking", "#45B39D", "#18493F"], ["EECU", "checking", "#2F5FC4", "#0A1A5C"], ["Neighborhood Credit Union", "checking", "#C9A04A", "#5C4714"], ["Velocity Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Austin Telco FCU", "checking", "#D9483B", "#7A1F18"], ["Texell Credit Union", "checking", "#35C08A", "#1F6B5A"], ["Abilene Teachers FCU", "checking", "#1C3B6E", "#0B1A33"], ["Educators Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Spectrum Credit Union", "checking", "#3A3F46", "#16191D"], ["DFCU Financial", "checking", "#2E86E0", "#123A6B"], ["Michigan State University FCU", "checking", "#D9483B", "#7A1F18"], ["Boeing Employees CU", "checking", "#F28A2E", "#5A2A16"], ["Kinecta FCU", "checking", "#45B39D", "#18493F"], ["Chevron FCU", "checking", "#C9A04A", "#5C4714"], ["Wings Financial CU", "checking", "#35C08A", "#1F6B5A"], ["Veridian Credit Union", "checking", "#F28A2E", "#5A2A16"], ["Langley FCU", "checking", "#2F5FC4", "#0A1A5C"], ["Truliant FCU", "checking", "#45B39D", "#18493F"], ["Coastal Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Local Government FCU", "checking", "#45B39D", "#18493F"], ["Founders FCU", "checking", "#3A3F46", "#16191D"], ["Space Coast Credit Union", "checking", "#7A4FD6", "#3A2370"], ["Fairwinds Credit Union", "checking", "#2BB0C9", "#0E4A57"], ["Achieva Credit Union", "checking", "#35C08A", "#1F6B5A"], ["Pelican State CU", "checking", "#1C3B6E", "#0B1A33"], ["Arkansas FCU", "checking", "#2E86E0", "#123A6B"], ["Tinker FCU", "checking", "#1C3B6E", "#0B1A33"], ["Oklahoma Central CU", "checking", "#35C08A", "#1F6B5A"], ["Bellco Credit Union", "checking", "#C9A04A", "#5C4714"], ["Canvas Credit Union", "checking", "#2F5FC4", "#0A1A5C"], ["Gesa Credit Union", "checking", "#D9483B", "#7A1F18"], ["Washington State Employees CU", "checking", "#35C08A", "#1F6B5A"], ["Idaho Central Credit Union", "checking", "#C9A04A", "#5C4714"], ["Arizona FCU", "checking", "#D9483B", "#7A1F18"], ["OneAZ Credit Union", "checking", "#2F5FC4", "#0A1A5C"], ["Nevada State Bank", "checking", "#35C08A", "#1F6B5A"], ["Hawaiian Electric Employees FCU", "checking", "#2E86E0", "#123A6B"]];
+  MORE_BANKS.forEach(e => { if (!BANK_CATALOG.some(b => b[0].toLowerCase() === e[0].toLowerCase())) BANK_CATALOG.push(e); });
+  // Words people search with that a name may not contain ("credit union" for "FCU", "rbfcu", "sefcu").
+  function catalogSearchText(e) {
+    const n = e[0].toLowerCase();
+    let extra = '';
+    if (/\b(fcu|cu|credit union)\b/.test(n)) extra += ' credit union fcu cu';
+    if (/security service/.test(n)) extra += ' ssfcu ssfcu primeline';
+    if (/randolph-brooks/.test(n)) extra += ' rbfcu';
+    if (/^chase/.test(n)) extra += ' jpmorgan';
+    if (/citibank|^citi/.test(n)) extra += ' citi';
+    return (n + ' ' + n.replace(/[^a-z0-9 ]/g, '') + extra);
+  }
+
   function catalogLook(entry, bank) {
-    if (bank) return { color: entry[2], color2: entry[3], finish: 'gradient', letter: 'white', icon: entry[1] === 'savings' ? '🐷' : '🏦' };
+    if (bank) return { color: entry[2], color2: entry[3], finish: 'gradient', letter: 'white', icon: '' };
     return { color: entry[2], color2: entry[3], finish: entry[4], letter: entry[5], icon: '' };
   }
 
@@ -4104,7 +4160,7 @@ tailwind.config = {
     } else if (st.step === 'nc-search') {
       h = (st.from0 ? ABACK(st.from0) : '') + AH(st.bank ? 'Add a bank account' : 'Add a card', st.bank ? 'Find yours, or add your own.' : 'Find yours and Truly matches the look.') +
         `<label class="flex items-center gap-2.5 rounded-2xl border border-line bg-page/40 px-4 py-3 mt-3"><span class="text-muted">🔍</span>
-          <input data-addf="q" value="${esc(st.q || '')}" placeholder="${st.bank ? 'Bank or credit union' : 'Card name, like Venture X'}" class="bg-transparent flex-1 text-[16px] outline-none" autocomplete="off"></label>
+          <input data-addf="q" value="${esc(st.q || '')}" placeholder="${st.bank ? 'Search ' + BANK_CATALOG.length + '+ banks & credit unions' : 'Search ' + CARD_CATALOG.length + '+ cards, like Venture X'}" class="bg-transparent flex-1 text-[16px] outline-none" autocomplete="off"></label>
          <div id="ncResults">${ncResults()}</div>`;
     } else if (st.step === 'nc-form') {
       const isCard = !st.bank;
@@ -4145,12 +4201,12 @@ tailwind.config = {
     const st = addState, q = String(st.q || '').toLowerCase().trim();
     const list = st.bank ? BANK_CATALOG : CARD_CATALOG;
     const words = q.split(/\s+/).filter(Boolean);
-    const hits = list.filter(e => words.every(w => e[0].toLowerCase().includes(w))).slice(0, q ? 12 : 8);
-    const mini = (l, net) => `<span class="shrink-0 relative" style="width:58px;height:37px;border-radius:6px;background:${lookBg(l)};box-shadow:inset 0 1px 0 rgba(255,255,255,.2)">${net ? `<i class="not-italic absolute right-1 bottom-0.5 text-[7px] font-bold tracking-wide uppercase" style="color:${l.letter}">${esc(net)}</i>` : ''}</span>`;
+    const hits = list.filter(e => words.every(w => catalogSearchText(e).includes(w.replace(/[^a-z0-9+&']/g, '') || w))).slice(0, q ? 25 : 8);
+    const mini = (l, net, nm) => `<span class="shrink-0 relative grid place-items-center" style="width:58px;height:37px;border-radius:6px;background:${cardArt(nm) ? 'linear-gradient(135deg,' + cardArt(nm).bg[0] + ',' + cardArt(nm).bg[1] + ')' : lookBg(l)};box-shadow:inset 0 1px 0 rgba(255,255,255,.2)">${cardArt(nm) ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${cardArt(nm).fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${cardArt(nm).svg}</svg>` : monoMark(nm, 17, LETTER[l.letter] || '#FFFFFF')}${net ? `<i class="not-italic absolute right-1 bottom-0.5 text-[7px] font-bold tracking-wide uppercase" style="color:${l.letter}">${esc(net)}</i>` : ''}</span>`;
     const row = (i, e) => {
       const l = catalogLook(e, st.bank);
       const sub = st.bank ? (e[1] === 'savings' ? 'Savings' : 'Checking') : e[4][0].toUpperCase() + e[4].slice(1) + ' · ' + e[1];
-      return `<button data-ncpick="${i}" class="w-full flex items-center gap-3.5 py-2.5 border-b border-line text-left active:opacity-70">${mini(l, st.bank ? '' : e[1])}
+      return `<button data-ncpick="${i}" class="w-full flex items-center gap-3.5 py-2.5 border-b border-line text-left active:opacity-70">${mini(l, st.bank ? '' : e[1], e[0])}
         <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(e[0])}</span><span class="block text-[13px] text-muted">${esc(sub)}</span></span><span class="text-muted">›</span></button>`;
     };
     return `<p class="text-[12px] tracking-[.07em] uppercase text-muted font-semibold mt-4 mb-1">${q ? (hits.length ? 'Matches' : 'No match') : 'Popular'}</p>` +
@@ -4238,6 +4294,7 @@ tailwind.config = {
       info.type = st.bank ? (st.kindBank === 'savings' || /savings/i.test(name) ? 'savings' : 'checking') : 'card';
       info.look = Object.assign({}, st.look);
       if (st.network) info.network = st.network;
+      if (/line of credit/i.test(st.network || '') || /\b(line of credit|primeline|\bloc)\b/i.test(key)) info.kind = 'loc';
       const l4 = String(st.last4 || '').replace(/\D/g, '').slice(-4); if (l4.length === 4) info.last4 = l4;
       const num = v => Math.abs(parseFloat(String(v || '').replace(/[$,]/g, ''))) || 0;
       if (!st.bank) {
@@ -5149,7 +5206,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-21 · 122';
+  const BUILD = '2026-11-21 · 123';
 
   /* =============================================================
      KEEPING THE DATA
