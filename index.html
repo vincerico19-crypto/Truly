@@ -595,6 +595,7 @@ tailwind.config = {
     repairDoublePayments();
     markAutoAnchors();
     fixRewards();
+    fixZelle();
     if (merged || firstRun) save();
   }
 
@@ -620,6 +621,13 @@ tailwind.config = {
      were worked out by Truly, not typed from the bank, so mark them: entries
      pasted afterwards (even dated earlier) then count toward the balance. */
   // Rewards saved before build 112 as card payments become reward credits.
+  // Build 121: Zelle gets its own category; older Zelle rows move over from P2P Transfers.
+  function fixZelle() {
+    if (settings.zelleFix121) return;
+    settings.zelleFix121 = true;
+    transactions.forEach(t => { if (t.cat === 'P2P Transfers' && /\bzelle\b/i.test(t.desc || '')) t.cat = 'Zelle'; });
+  }
+
   function fixRewards() {
     if (settings.rewardFix112) return;
     settings.rewardFix112 = true;
@@ -999,8 +1007,9 @@ tailwind.config = {
     'Auto Repair':    ['#8FA9C4', 'carfix', '🔧'],
     'Phone':          ['#4F93D6', 'phone', '📱'],
     'Personal Care':  ['#B266A8', 'scissors', '💈'],
-    'P2P Transfers':  ['#4F93D6', 'swap', '💸'],
-    'Rewards':        ['#C9A04A', 'tag', '🎁'],      // cash back or points redeemed      // Zelle, Venmo, Cash App
+    'Zelle':          ['#7B5CD6', 'swap', '💸'],     // money sent to a person
+    'P2P Transfers':  ['#4F93D6', 'swap', '📲'],     // Venmo, Cash App, PayPal
+    'Rewards':        ['#C9A04A', 'tag', '🎁'],      // cash back or points redeemed
     'Income':         ['#35C08A', 'inflow', '💵'],   // money in is green
     'Uncategorized':  ['#93A1AE', 'tag', '🏷️']
   };
@@ -1156,7 +1165,9 @@ tailwind.config = {
     [/\b(amazon|target|best buy|home depot|lowe'?s|ikea|ross|marshalls|tj ?maxx|old navy|nike|shein|etsy|ebay)\b/i, 'Shopping'],
     [/\bcredit[- ]\w*\s*(back\s*)?(reward|redemption)s?\b/i, 'Transfer'],
     [/\b(cash ?back reward|statement credit|rewards? credit|rewards? redemption|streaming credit|monthly credit|benefit credit|electronic payment|online payment|card payment)\b/i, 'Transfer'],
-    [/\b(zelle|venmo|cash ?app|apple cash|square cash|remitly|western union|moneygram|wise transfer|sendwave|paypal)\b/i, 'P2P Transfers'],
+    [/\bzelle\b/i, 'Zelle'],
+    [/^\s*to\s+(?!savings|checking|account|ssfcu|security service)[a-z]/i, 'Zelle'],   // Frost lists Zelle sends as "TO NAME"
+    [/\b(venmo|cash ?app|apple cash|square cash|remitly|western union|moneygram|wise transfer|sendwave|paypal)\b/i, 'P2P Transfers'],
     [/\b(insurance|geico|progressive|state farm|allstate|usaa|premium)\b/i, 'Insurance'],
     [/\b(church|tithe|offering|donation|charity|gofundme|red cross|lutheran|baptist|methodist|catholic|presbyterian|parish|chapel|ministr|diocese|synod)\b/i, 'Giving'],
     [/\b(gym|planet fitness|la fitness|golds|crossfit|membership)\b/i, 'Fitness'],
@@ -1883,7 +1894,7 @@ tailwind.config = {
      REVIEW STEP
   ============================================================= */
   function knownCategories() {
-    const set = new Set(['Groceries','Housing','Transportation','Utilities','Dining','Shopping','Health','Subscriptions','Entertainment','Insurance','Giving','Fitness','Family','Debt & Fees','Savings','Income','Uncategorized']);
+    const set = new Set(['Groceries','Housing','Transportation','Utilities','Dining','Shopping','Health','Subscriptions','Entertainment','Insurance','Giving','Fitness','Family','Debt & Fees','Savings','Zelle','Income','Uncategorized']);
     transactions.forEach(t => set.add(t.cat));
     Object.values(catMap).forEach(c => set.add(c));
     return Array.from(set).sort();
@@ -3962,7 +3973,7 @@ tailwind.config = {
       return [{ id: uid(), pair, date, desc: 'To ' + st.to, cat: 'Transfer', acct: st.from, xfer: true, amount: amt },
               { id: uid(), pair, date, desc: 'From ' + st.from, cat: 'Transfer', acct: st.to, xfer: true, amount: -amt }];
     }
-    if (st.kind === 'person') return [{ id: uid(), date, desc: (st.app || 'Zelle') + ' to ' + (st.to || 'someone'), cat: 'P2P Transfers', acct: st.from, xfer: false, amount: amt }];
+    if (st.kind === 'person') return [{ id: uid(), date, desc: (st.app || 'Zelle') + ' to ' + (st.to || 'someone'), cat: (st.app || 'Zelle') === 'Zelle' ? 'Zelle' : 'P2P Transfers', acct: st.from, xfer: false, amount: amt }];
     // loan or bill: money that leaves you
     const nm = (st.to || 'Bill').trim();
     return [{ id: uid(), date, desc: nm, cat: rememberedCat(nm) || 'Debt & Fees', acct: st.from, xfer: false, amount: amt }];
@@ -5083,7 +5094,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-19 · 120';
+  const BUILD = '2026-11-21 · 121';
 
   /* =============================================================
      KEEPING THE DATA
