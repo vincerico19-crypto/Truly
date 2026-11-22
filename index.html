@@ -608,7 +608,8 @@ tailwind.config = {
     const seeded = seedNewAccounts122();
     const looked = fixLooks123();
     const loced = locDetails124();
-    if (merged || firstRun || seeded || looked || loced) save();
+    const carded = cardDetails125();
+    if (merged || firstRun || seeded || looked || loced || carded) save();
   }
 
   /* "Frost" beside "Frost Bank": a short name with no balance of its own that
@@ -636,6 +637,23 @@ tailwind.config = {
   // Build 122: one-time add of the Quicksilver card and the SSFCU PrimeLine line of
   // credit, as their apps showed them on Nov 21. Only for this Truly (has Frost Bank),
   // and never over an account that is already there.
+  // Build 125: each card's details, as their apps and statement showed them on Nov 21.
+  function cardDetails125() {
+    if (settings.cards125) return false;
+    settings.cards125 = true;
+    const find = re => Object.keys(accounts).find(n => re.test(n));
+    const put = (re, v) => { const n = find(re); if (n) Object.assign(accounts[n], v, { detailsAsOf: '2026-11-21' }); };
+    put(/quicksilver/i, { apr: 30.74, aprVariable: true, minPay: 56, dueDay: 8, statementBal: 1607.13, statementDate: '2026-11-13',
+      lastPayAmt: 56.02, lastPayDate: '2026-11-02', rewards: '$4.78 cash back', annualFee: 0, lateFee: 'Up to $40', foreignFee: 0, limit: 4250 });
+    put(/\bsavor\b/i, { apr: 28.49, aprVariable: true, minPay: 0, dueDay: 4, statementBal: 912.21, statementDate: '2026-11-09',
+      lastPayAmt: 1524.64, lastPayDate: '2026-11-18', rewards: '$7.18 cash back', annualFee: 0, lateFee: 'Up to $40', foreignFee: 0, limit: 6000 });
+    put(/venture\s*x/i, { apr: 28.49, aprVariable: true, minPay: 25, dueDay: 16, statementBal: 1216.98, statementDate: '2026-11-21',
+      lastPayAmt: 899.22, lastPayDate: '2026-11-18', rewards: '316 miles', annualFee: 395, lateFee: 'Up to $40', foreignFee: 0, limit: 20000 });
+    put(/blue cash|amex/i, { apr: 17.74, cashApr: 28.99, aprVariable: true, statementBal: 1757.51, statementDate: '2026-10-11',
+      rewards: '$29.52 cash back', ytdInterest: 170.29, ytdFees: 95, cashLimit: 3400, limit: 25200 });
+    ['Capital One Quicksilver', 'Capital One Savor', 'Capital One Venture X'].forEach(n => { if (accounts[n]) delete accounts[n].dueDate; });
+    return true;
+  }
   function locDetails124() {
     if (settings.loc124) return false;
     settings.loc124 = true;
@@ -3502,26 +3520,37 @@ tailwind.config = {
     openSheet($('acctSheet'));
   }
 
-  /* A line of credit's own numbers, as the credit union shows them. */
+  /* A card's or line of credit's own numbers, as its app or statement shows them. */
   function locInfoHtml(name, bal) {
-    const i = accounts[name] || {};
-    if (i.kind !== 'loc') return '';
+    const i = accounts[name] || {}, loc = i.kind === 'loc';
+    const known = ['apr', 'minPay', 'statementBal', 'lastPayAmt', 'rewards', 'payoff', 'annualFee'].some(k => i[k] !== undefined && i[k] !== '');
+    if (!known) return '';
     const d = iso => { if (!iso) return ''; const [y, m, dd] = iso.split('-').map(Number); return new Date(y, m - 1, dd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+    const fee = v => v === undefined ? null : (typeof v === 'number' ? (v ? money(v) : 'None') : v);
     const rows = [];
-    if (i.apr) rows.push(['Interest rate', Number(i.apr).toFixed(2) + '%']);
-    if (i.apr && bal > 0) rows.push(['Daily interest', '≈ ' + money(bal * i.apr / 100 / 365)]);
+    if (i.apr) rows.push([loc ? 'Interest rate' : 'Purchase APR', Number(i.apr).toFixed(2) + '%' + (i.aprVariable ? ' · variable' : '')]);
+    if (i.cashApr) rows.push(['Cash advance APR', Number(i.cashApr).toFixed(2) + '%' + (i.aprVariable ? ' · variable' : '')]);
+    if (loc && i.apr && bal > 0) rows.push(['Daily interest', '≈ ' + money(bal * i.apr / 100 / 365)]);
     const nd = nextDue(i);
-    if (i.nextPayAmt !== undefined || nd) rows.push(['Next payment', (i.nextPayAmt !== undefined ? money(i.nextPayAmt) : '—') + (nd ? ' · ' + d(isoOf(nd)) : '')]);
+    const payAmt = loc ? i.nextPayAmt : i.minPay;
+    if (payAmt !== undefined) rows.push([loc ? 'Next payment' : 'Minimum payment', money(payAmt) + (nd ? ' · due ' + d(isoOf(nd)) : '')]);
+    else if (nd) rows.push(['Payment due', d(isoOf(nd))]);
+    if (i.statementBal !== undefined) rows.push(['Last statement', money(i.statementBal) + (i.statementDate ? ' · ' + d(i.statementDate) : '')]);
     if (i.lastPayAmt) rows.push(['Last payment', money(i.lastPayAmt) + (i.lastPayDate ? ' · ' + d(i.lastPayDate) : '')]);
+    if (i.rewards) rows.push(['Rewards', i.rewards]);
+    if (fee(i.annualFee) !== null) rows.push(['Annual fee', fee(i.annualFee)]);
+    if (fee(i.lateFee) !== null) rows.push(['Late fee', fee(i.lateFee)]);
+    if (fee(i.foreignFee) !== null) rows.push(['Foreign transaction fee', fee(i.foreignFee)]);
     if (i.payoff) rows.push(['Payoff amount', money(i.payoff) + (i.payoffAsOf ? ' · as of ' + d(i.payoffAsOf) : '')]);
     if (i.ytdInterest) rows.push(['Interest paid this year', money(i.ytdInterest)]);
     if (i.priorInterest) rows.push(['Interest paid last year', money(i.priorInterest)]);
-    if (i.limit) rows.push(['Credit limit', money(i.limit)]);
+    if (i.ytdFees) rows.push(['Fees paid this year', money(i.ytdFees)]);
+    if (i.cashLimit) rows.push(['Cash advance limit', money(i.cashLimit)]);
+    if (i.limit) rows.push([loc ? 'Credit limit' : 'Credit line', money(i.limit)]);
     if (last4(name)) rows.push(['Account', '•••• ' + last4(name)]);
-    if (!rows.length) return '';
     return `<div class="mt-3 rounded-xl bg-white/5 px-3.5 py-1 divide-y divide-white/5">
-      ${rows.map(r => `<div class="flex justify-between gap-3 py-2.5 text-[14px]"><span class="text-muted">${r[0]}</span><span class="num font-semibold text-right">${r[1]}</span></div>`).join('')}
-    </div>`;
+      ${rows.map(r => `<div class="flex justify-between gap-3 py-2.5 text-[14px]"><span class="text-muted">${r[0]}</span><span class="num font-semibold text-right">${esc(r[1])}</span></div>`).join('')}
+    </div>${i.detailsAsOf ? `<p class="text-[11px] text-muted mt-1.5">Details from your card's app, ${esc(d(i.detailsAsOf))}.</p>` : ''}`;
   }
 
   function renderAcctSheet() {
@@ -5239,7 +5268,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-21 · 124';
+  const BUILD = '2026-11-21 · 125';
 
   /* =============================================================
      KEEPING THE DATA
