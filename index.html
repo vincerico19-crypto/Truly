@@ -2431,7 +2431,7 @@ tailwind.config = {
     const cards = all.filter(isCardAcct), banks = all.filter(n => !isCardAcct(n));
     let limSum = 0, owedSum = 0;
     cards.forEach(n => { const lim = Number((accounts[n] || {}).limit) || 0; if (lim) { limSum += lim; owedSum += Math.max(balanceDetail(n).now, 0); } });
-    $('accCardsTitle').textContent = cards.some(n => (accounts[n] || {}).kind === 'loc') ? 'Cards & credit lines' : 'Credit cards';
+    $('accCardsTitle').textContent = cards.some(n => (accounts[n] || {}).kind === 'loc') ? 'Cards & lines of credit' : 'Credit cards';
     $('accCards').innerHTML = cards.length ? cards.map(acctFaceHtml).join('') : `<p class="px-1 text-[14px] text-muted">No cards yet. Tap + to add one.</p>`;
     $('accUtil').textContent = limSum ? Math.round(owedSum / limSum * 100) + '% of your limits used' : '';
     $('accBanksSec').classList.toggle('hidden', !banks.length);
@@ -3097,7 +3097,7 @@ tailwind.config = {
     const cards = names.filter(isCardAcct), banks = names.filter(n => !isCardAcct(n));
 
     $('homeCardsSec').classList.toggle('hidden', !cards.length);
-    $('homeCardsTitle').textContent = cards.some(n => (accounts[n] || {}).kind === 'loc') ? 'Cards & credit' : 'Cards';
+    $('homeCardsTitle').textContent = cards.some(n => (accounts[n] || {}).kind === 'loc') ? 'Cards & lines of credit' : 'Cards';
     let withDue = 0, paid = 0;
     $('acctList').innerHTML = cards.map(n => {
       const info = accounts[n] || {}, bd = balanceDetail(n), lim = Number(info.limit) || 0;
@@ -3524,7 +3524,7 @@ tailwind.config = {
   function locInfoHtml(name, bal) {
     const i = accounts[name] || {}, loc = i.kind === 'loc';
     const known = ['apr', 'minPay', 'statementBal', 'lastPayAmt', 'rewards', 'payoff', 'annualFee'].some(k => i[k] !== undefined && i[k] !== '');
-    if (!known) return '';
+    if (!known) return isCardAcct(name) ? `<button data-editdet="${esc(name)}" class="mt-3 w-full rounded-xl border border-dashed border-line px-3.5 py-3 text-left text-[14px] active:bg-white/5"><span class="font-semibold">Add APR, statement, rewards &amp; fees</span><span class="block text-[12px] text-muted mt-0.5">Paste them from your card's app in one go.</span></button>` : '';
     const d = iso => { if (!iso) return ''; const [y, m, dd] = iso.split('-').map(Number); return new Date(y, m - 1, dd).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
     const fee = v => v === undefined ? null : (typeof v === 'number' ? (v ? money(v) : 'None') : v);
     const rows = [];
@@ -3550,7 +3550,7 @@ tailwind.config = {
     if (last4(name)) rows.push(['Account', '•••• ' + last4(name)]);
     return `<div class="mt-3 rounded-xl bg-white/5 px-3.5 py-1 divide-y divide-white/5">
       ${rows.map(r => `<div class="flex justify-between gap-3 py-2.5 text-[14px]"><span class="text-muted">${r[0]}</span><span class="num font-semibold text-right">${esc(r[1])}</span></div>`).join('')}
-    </div>${i.detailsAsOf ? `<p class="text-[11px] text-muted mt-1.5">Details from your card's app, ${esc(d(i.detailsAsOf))}.</p>` : ''}`;
+    </div><div class="flex justify-between items-center mt-1.5"><p class="text-[11px] text-muted">${i.detailsAsOf ? 'Details as of ' + esc(d(i.detailsAsOf)) + '.' : ''}</p><button data-editdet="${esc(name)}" class="text-[13px] font-medium py-1 active:opacity-60" style="color:#6FB0EE">Update details</button></div>`;
   }
 
   function renderAcctSheet() {
@@ -4063,6 +4063,98 @@ tailwind.config = {
     return { color: entry[2], color2: entry[3], finish: entry[4], letter: entry[5], icon: '' };
   }
 
+
+  /* =============================================================
+     CARD DETAILS FROM A SCREENSHOT
+     Copy the text of your card app's "Account details" screen (or a
+     statement) with Live Text, paste it, and the details fill in.
+  ============================================================= */
+  const DETAIL_KEYS = ['apr', 'cashApr', 'minPay', 'statementBal', 'statementDate', 'lastPayAmt', 'lastPayDate', 'rewards', 'annualFee', 'lateFee', 'foreignFee', 'ytdInterest', 'ytdFees', 'cashLimit', 'payoff'];
+  function parseCardDetails(raw) {
+    const t = ' ' + String(raw || '').replace(/[‘’]/g, "'").replace(/\s+/g, ' ') + ' ';
+    const out = {};
+    const amt = v => cents(parseFloat(String(v).replace(/[$,\s]/g, '')));
+    const M = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\\.?';
+    const toIso = (str) => {
+      if (!str) return '';
+      let m = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+      if (m) { const y = m[3].length === 2 ? 2000 + +m[3] : +m[3]; return iso(y, +m[1], +m[2]); }
+      m = str.match(new RegExp('(' + M + ')\\s+(\\d{1,2})', 'i'));
+      if (!m) return '';
+      const mi = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m[1].slice(0, 3).toLowerCase()) + 1;
+      const now = new Date(); let y = now.getFullYear();
+      if (mi - (now.getMonth() + 1) > 6) y--; else if ((now.getMonth() + 1) - mi > 6) y++;
+      return iso(y, mi, +m[2]);
+    };
+    const grab = (re) => { const m = t.match(re); return m ? m : null; };
+    const MONEY = '\\$?\\s?([\\d,]+\\.\\d{2})';
+    const DATE = '((?:' + M + ')\\s+\\d{1,2}|\\d{1,2}\\/\\d{1,2}\\/\\d{2,4})';
+    let m;
+    if ((m = grab(new RegExp('(?:credit line|credit limit)\\s*:?\\s*' + MONEY, 'i')))) out.limit = amt(m[1]);
+    if ((m = grab(new RegExp('available credit\\s*:?\\s*' + MONEY, 'i')))) out.available = amt(m[1]);
+    if ((m = grab(new RegExp('minimum payment(?: due)?\\s*:?\\s*' + MONEY + '(?:\\s*due\\s+' + DATE + ')?', 'i')))) { out.minPay = amt(m[1]); if (m[2]) out.dueDate = toIso(m[2]); }
+    if ((m = grab(new RegExp('next payment amount\\s*' + MONEY, 'i')))) out.minPay = amt(m[1]);
+    if ((m = grab(new RegExp('(?:next payment date|payment due date)\\s*:?\\s*' + DATE, 'i')))) out.dueDate = toIso(m[1]);
+    if ((m = grab(new RegExp('(?:last statement balance|statement balance|new balance)\\s*:?\\s*' + MONEY + '(?:\\s*as of\\s+' + DATE + ')?', 'i')))) { out.statementBal = amt(m[1]); if (m[2]) out.statementDate = toIso(m[2]); }
+    if ((m = grab(new RegExp('last payment(?: amount)?\\s*:?\\s*' + MONEY + '(?:\\s*posted\\s+' + DATE + ')?', 'i')))) { out.lastPayAmt = amt(m[1]); if (m[2]) out.lastPayDate = toIso(m[2]); }
+    if ((m = grab(new RegExp('last payment date\\s*:?\\s*' + DATE, 'i')))) out.lastPayDate = toIso(m[1]);
+    if ((m = grab(/(?:purchase apr|current purchase apr|interest rate)\s*:?\s*(\d{1,2}\.\d{1,2})\s*%/i)) || (m = grab(/purchases\b[^%]{0,60}?(\d{1,2}\.\d{2})\s*%/i))) out.apr = +m[1];
+    if ((m = grab(/(?:cash advance apr|cash advances\b[^%]{0,60}?)(\d{1,2}\.\d{2})\s*%/i))) out.cashApr = +m[1];
+    if (out.apr && /variable/i.test(t)) out.aprVariable = true;
+    if ((m = grab(/\$\s?([\d,]+\.\d{2})\s*rewards cash/i)) || (m = grab(/reward dollars[^:]*:\s*\$?([\d,]+\.\d{2})/i))) out.rewards = money(amt(m[1])) + ' cash back';
+    else if ((m = grab(/([\d,]+)\s*(miles|points)\b/i))) out.rewards = m[1] + ' ' + m[2].toLowerCase();
+    const feeVal = v => /no fee|none|\$0(\.00)?\b/i.test(v) ? 0 : v.trim().replace(/^up to/i, 'Up to');
+    if ((m = grab(/(?:membership|annual) fee\s*:?\s*(no fee|none|\$[\d,]+(?:\.\d{2})?)/i))) out.annualFee = feeVal(m[1]);
+    if ((m = grab(/late (?:payment )?fee\s*:?\s*(no fee|none|up to \$\d+|\$\d+(?:\.\d{2})?)/i))) out.lateFee = feeVal(m[1]);
+    if ((m = grab(/foreign transaction fee\s*:?\s*(no fee|none|\d+(?:\.\d+)?%)/i))) out.foreignFee = feeVal(m[1]);
+    if ((m = grab(/(?:total interest in \d{4}|current year interest paid)\s*:?\s*\$?\s?([\d,]+\.\d{2})/i))) out.ytdInterest = amt(m[1]);
+    if ((m = grab(/prior year interest paid\s*:?\s*\$?\s?([\d,]+\.\d{2})/i))) out.priorInterest = amt(m[1]);
+    if ((m = grab(/total fees in \d{4}\s*:?\s*\$?\s?([\d,]+\.\d{2})/i))) out.ytdFees = amt(m[1]);
+    if ((m = grab(/cash advance limit\s*:?\s*\$?\s?([\d,]+\.\d{2})/i))) out.cashLimit = amt(m[1]);
+    if ((m = grab(/payoff amount\s*:?\s*\$?\s?([\d,]+\.\d{2})/i))) out.payoff = amt(m[1]);
+    if ((m = grab(/(?:principal balance|current balance)\s*:?\s*\$?\s?([\d,]+\.\d{2})/i)) || (m = grab(/\$\s?([\d,]+\.\d{2})\s*current balance/i))) out.owed = amt(m[1]);
+    if (out.owed === undefined && out.limit && out.available !== undefined) out.owed = cents(out.limit - out.available);
+    if ((m = grab(/(?:\.\.\.|ending in|•{2,4}|x{2,4})\s?(\d{4})\b/i))) out.last4 = m[1];
+    if (/line of credit|primeline|principal balance|payoff amount/i.test(t)) out.loc = true;
+    return out;
+  }
+  // Put what was read (or typed) onto an account.
+  function applyCardDetails(info, d) {
+    DETAIL_KEYS.forEach(k => { if (d[k] !== undefined && d[k] !== '') info[k] = d[k]; });
+    if (d.priorInterest !== undefined) info.priorInterest = d.priorInterest;
+    if (d.aprVariable) info.aprVariable = true;
+    if (d.dueDate) { const day = +d.dueDate.slice(8, 10); if (day) { info.dueDay = day; delete info.dueDate; } }
+    if (d.limit) info.limit = d.limit;
+    if (d.last4) info.last4 = d.last4;
+    if (d.loc) info.kind = 'loc';
+    info.detailsAsOf = todayISO();
+  }
+  // The details form, used when adding a card and from a card's own page.
+  function detailsFormHtml(st) {
+    const d = st.det || {};
+    const row = (key, label, ph, kind) => `<label class="flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2"><span class="text-muted text-[15px] shrink-0 mr-3">${label}</span>
+      <input data-detf="${key}" value="${esc(d[key] === undefined ? '' : (d[key] === 0 && /Fee$/.test(key) ? 'None' : d[key]))}" placeholder="${ph}" ${kind === 'n' ? 'inputmode="decimal"' : kind === 'd' ? 'type="date"' : ''} class="bg-transparent text-right text-[15px] font-medium outline-none min-w-0 flex-1"></label>`;
+    return `<div class="rounded-2xl border border-dashed border-line px-4 py-3 mt-4">
+        <p class="text-[15px] font-semibold">Fill it in from your card's app</p>
+        <p class="text-[13px] text-muted mt-1 leading-snug">Open "Account details" (or a statement), press on the text, Select All, Copy, then paste here.</p>
+        <textarea data-detpaste rows="3" placeholder="Paste here" class="mt-2.5 w-full rounded-xl bg-page/60 border border-line px-3 py-2 text-[14px] outline-none"></textarea>
+        ${st.detNote ? `<p class="text-[13px] mt-1.5" style="color:${st.detNote.ok ? '#8FD9B6' : '#F5C77A'}">${esc(st.detNote.text)}</p>` : ''}
+      </div>` +
+      row('apr', 'Purchase APR %', '24.99', 'n') + row('minPay', 'Minimum payment', '$25.00', 'n') +
+      row('statementBal', 'Last statement', '$0.00', 'n') + row('statementDate', 'Statement date', '', 'd') +
+      row('lastPayAmt', 'Last payment', '$0.00', 'n') + row('lastPayDate', 'Paid on', '', 'd') +
+      row('rewards', 'Rewards', '$4.78 cash back') + row('annualFee', 'Annual fee', 'None or $95') +
+      row('lateFee', 'Late fee', 'Up to $40') + row('foreignFee', 'Foreign transaction fee', 'None or 3%');
+  }
+  function cleanDetail(k, v) {
+    v = String(v).trim();
+    if (v === '') return undefined;
+    if (/Fee$/.test(k)) return /^(none|no fee|no|0|\$0(\.00)?)$/i.test(v) ? 0 : (/^\$?[\d,]+(\.\d+)?$/.test(v) ? amtNum(v) : v);
+    if (['apr', 'cashApr', 'minPay', 'statementBal', 'lastPayAmt', 'ytdInterest', 'ytdFees', 'cashLimit', 'payoff'].includes(k)) { const n = amtNum(v); return isNaN(n) ? undefined : n; }
+    return v;
+  }
+  function amtNum(v) { return cents(parseFloat(String(v).replace(/[$,%\s]/g, ''))); }
+
   /* =============================================================
      ADD / PAY FLOW
      One button for everything. A card payment is picked, priced and
@@ -4235,8 +4327,12 @@ tailwind.config = {
         (isCard ? f('limit', 'Credit limit', '$5,000', 'number') + f('owed', 'Owed right now', '$0.00', 'number') +
                   f('dueDay', 'Due day of month', '16', 'number') + f('minPay', 'Minimum payment', 'optional', 'number')
                 : f('owed', 'Balance right now', '$0.00', 'number')) +
+        (isCard ? `<button data-add="nc-details" class="w-full flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px] active:opacity-70"><span class="text-muted">APR, statement, rewards &amp; fees</span><span style="color:#5fb6f0">${st.det && Object.keys(st.det).length ? Object.keys(st.det).length + ' added ›' : 'Add ›'}</span></button>` : '') +
         `<button data-add="nc-look" class="w-full flex items-center justify-between rounded-2xl border border-line bg-page/40 px-4 py-3 mt-2.5 text-[15px] active:opacity-70"><span class="text-muted">Look</span><span style="color:#5fb6f0">Customize ›</span></button>` +
         ABTN('nc-save', isCard ? 'Add card' : 'Add account');
+    } else if (st.step === 'nc-details') {
+      h = ABACK(st.edit ? 'close' : 'nc-form') + AH(st.edit ? esc(shortAcct(st.edit)) + ' details' : 'Card details', st.edit ? 'Everything here shows under Owed now.' : 'All optional. You can add these later too.') +
+        detailsFormHtml(st) + ABTN(st.edit ? 'det-save' : 'det-done', st.edit ? 'Save details' : 'Done');
     } else if (st.step === 'nc-look') {
       const L = st.look;
       const seg = (key, vals) => `<div class="flex flex-wrap gap-2 mt-2">${vals.map(([v, lbl]) => `<button data-look="${key}" data-v="${esc(v)}" class="px-3 py-2 rounded-xl text-[14px] font-semibold border ${L[key] === v ? 'border-ledger bg-ledger/15' : 'border-line bg-page/40'} active:opacity-70">${lbl}</button>`).join('')}</div>`;
@@ -4298,6 +4394,24 @@ tailwind.config = {
   $('cardsAddBank').onclick = () => openNewCard(true);
 
   $('addSheet').addEventListener('input', function (e) {
+    const df = e.target.getAttribute && e.target.getAttribute('data-detf');
+    if (df && addState) { addState.det = addState.det || {}; const v = cleanDetail(df, e.target.value); if (v === undefined) delete addState.det[df]; else addState.det[df] = v; return; }
+    if (e.target.hasAttribute && e.target.hasAttribute('data-detpaste') && addState) {
+      const got = parseCardDetails(e.target.value);
+      const keys = Object.keys(got).filter(k => !['available', 'loc'].includes(k));
+      if (!keys.length) { addState.detNote = { ok: false, text: 'Couldn’t read details from that. Try copying the whole screen.' }; renderAdd(); return; }
+      addState.det = Object.assign(addState.det || {}, got);
+      if (!addState.edit) {               // a new card: fill the main form too
+        if (got.limit) addState.limit = String(got.limit);
+        if (got.owed !== undefined) addState.owed = String(got.owed);
+        if (got.dueDate) addState.dueDay = String(+got.dueDate.slice(8, 10));
+        if (got.minPay !== undefined) addState.minPay = String(got.minPay);
+        if (got.last4) addState.last4 = got.last4;
+        if (got.loc) addState.network = 'Line of credit';
+      }
+      addState.detNote = { ok: true, text: 'Read ' + keys.length + ' detail' + (keys.length === 1 ? '' : 's') + '. Check them below.' };
+      renderAdd(); return;
+    }
     const f = e.target.getAttribute && e.target.getAttribute('data-addf');
     const lc = e.target.getAttribute && e.target.getAttribute('data-lookc');
     if (lc && addState && addState.look) { addState.look[lc] = e.target.value; refreshFace(); return; }
@@ -4340,6 +4454,16 @@ tailwind.config = {
     } else if (k === 'paste') { closeSheets(); openPasteSheet(); }
     else if (k === 'paid') addGo({ step: 'paidwhat' });
     else if (k === 'nc-look') addGo({ step: 'nc-look' });
+    else if (k === 'nc-details') addGo({ step: 'nc-details', detNote: null });
+    else if (k === 'det-done') addGo({ step: 'nc-form', detNote: null });
+    else if (k === 'det-save') {
+      const info = accounts[st.edit]; if (!info) { closeSheets(); return; }
+      const d = Object.assign({}, st.det || {});
+      DETAIL_KEYS.forEach(key => { if (d[key] === undefined) delete info[key]; });
+      applyCardDetails(info, d);
+      if (d.owed !== undefined && st.det.owed !== undefined && st.useOwed) { info.balance = d.owed; info.asOf = todayISO(); info.asOfTime = Date.now(); delete info.auto; }
+      save(); render(); closeSheets(); toast('Details saved');
+    }
     else if (k === 'nc-lookdone') addGo({ step: 'nc-form' });
     else if (k === 'look-save') {
       const info = accounts[st.edit] = accounts[st.edit] || {};
@@ -4367,6 +4491,7 @@ tailwind.config = {
       if (st.owed !== undefined && String(st.owed).trim() !== '' || !exists) {
         info.balance = cents(num(st.owed)); info.asOf = todayISO(); info.asOfTime = Date.now(); delete info.auto;
       }
+      if (!st.bank && st.det && Object.keys(st.det).length) { const d = Object.assign({}, st.det); delete d.owed; delete d.limit; delete d.last4; applyCardDetails(info, d); }
       save(); render(); renderAcctSheet(); renderBalances();
       if (st.from0 === 'card' && !st.bank) { addGo({ step: 'card', kind: 'card', from: defaultFrom() }); toast(key + ' added'); }
       else { closeSheets(); toast(key + ' added'); }
@@ -4562,6 +4687,13 @@ tailwind.config = {
   }
   $('acctSheetBody').addEventListener('click', function (e) {
     const pc = e.target.closest('[data-paycard]'); if (pc) { payCardFlow(pc.getAttribute('data-paycard')); return; }
+    const ed = e.target.closest('[data-editdet]'); if (ed) {
+      const n = ed.getAttribute('data-editdet'), info = accounts[n] || {}, det = {};
+      DETAIL_KEYS.forEach(k => { if (info[k] !== undefined) det[k] = info[k]; });
+      closeSheets();
+      setTimeout(() => { addState = { step: 'nc-details', edit: n, det, detNote: null }; renderAdd(); openSheet($('addSheet')); }, 30);
+      return;
+    }
     const ub = e.target.closest('[data-updbal]'); if (ub) { openBalanceFor(ub.getAttribute('data-updbal')); return; }
     const late = e.target.closest('[data-countlate]');
     if (late) {
@@ -5268,7 +5400,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-21 · 125';
+  const BUILD = '2026-11-21 · 126';
 
   /* =============================================================
      KEEPING THE DATA
