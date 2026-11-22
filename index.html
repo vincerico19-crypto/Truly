@@ -121,12 +121,21 @@ tailwind.config = {
     <button id="nudgeAdd" class="h-9 px-3 rounded-lg bg-accent text-white text-[13px] font-semibold active:opacity-80">Add</button>
     <button id="nudgeLater" aria-label="Not today" class="w-8 h-8 grid place-items-center rounded-full text-muted active:bg-line"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
   </div>
-  <section id="homeHero" class="px-1 pt-2">
-    <p class="text-[15px] font-medium text-muted">Truly yours</p>
-    <p id="heroNet" class="num text-[44px] leading-[1.1] font-bold tracking-tight mt-1">—</p>
-    <p id="heroSub" class="num text-[15px] text-muted mt-1.5"></p>
-    <div id="heroBar" class="hidden mt-4 h-2 flex gap-[3px]"></div>
-    <div id="heroBarLbl" class="hidden mt-2.5 justify-between items-center text-[13px] num"></div>
+  <section id="homeHero" class="relative rounded-[24px] p-5 overflow-hidden border" style="border-color:#22303A;background:radial-gradient(120% 120% at 0% 0%,rgba(43,196,138,.26),transparent 55%),radial-gradient(130% 140% at 100% 100%,rgba(61,139,224,.30),transparent 60%),#121920">
+    <button id="mainAcctBtn" class="flex items-center gap-2.5 text-left active:opacity-70">
+      <span id="mainMini"></span>
+      <span><span id="mainName" class="block text-[15px] font-semibold">Your bank</span><span id="mainKind" class="block text-[12px] text-muted">Main account</span></span>
+    </button>
+    <p class="text-[13px] text-muted mt-5">Available</p>
+    <p id="mainBal" class="num text-[44px] leading-[1.05] font-bold tracking-tight">—</p>
+    <p id="mainSub" class="text-[13px] text-muted mt-1"></p>
+    <div class="mt-5 pt-4 border-t grid grid-cols-2 gap-3" style="border-color:rgba(255,255,255,.08)">
+      <button data-goaccts class="text-left active:opacity-70"><span class="block text-[12px] text-muted">Owed on cards &amp; credit</span><span id="heroOwed" class="num block text-[18px] font-semibold mt-0.5">—</span></button>
+      <div class="text-right"><span class="block text-[12px] text-muted">Truly yours</span><span id="heroNet" class="num block text-[18px] font-semibold mt-0.5">—</span></div>
+    </div>
+    <div id="heroBar" class="hidden mt-3 h-1.5 flex gap-[3px]"></div>
+    <div id="heroBarLbl" class="hidden mt-2 justify-between items-center text-[12px] num"></div>
+    <p id="heroSub" class="hidden"></p>
   </section>
   <section id="homeMonth" class="mt-5 bg-card rounded-[20px] border border-line p-[18px]"></section>
   <button id="reviewCard" class="mt-3 w-full text-left rounded-[20px] border border-line bg-card px-4 py-3.5 flex items-center gap-3 active:bg-line">
@@ -137,7 +146,7 @@ tailwind.config = {
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7580" stroke-width="2.6" stroke-linecap="round"><path d="m9 18 6-6-6-6"/></svg>
   </button>
   <section id="homeCardsSec" class="mt-6">
-    <div class="flex items-center justify-between px-1 mb-2.5"><h2 class="text-[20px] font-bold tracking-tight">Cards</h2><span id="cardsBadge"></span></div>
+    <div class="flex items-center justify-between px-1 mb-2.5"><h2 id="homeCardsTitle" class="text-[20px] font-bold tracking-tight">Cards</h2><span id="cardsBadge"></span></div>
     <div id="acctList" class="bg-card rounded-[20px] border border-line divide-y divide-line overflow-hidden"></div>
   </section>
   <section id="homeCashSec" class="mt-6">
@@ -258,7 +267,7 @@ tailwind.config = {
     <div class="bg-card rounded-[18px] border border-line px-4 py-3.5"><p class="text-[13px] text-muted">Owed on cards</p><p id="accOwed" class="num text-[22px] font-bold mt-1">—</p></div>
   </section>
   <section id="accCardsSec" class="mt-6">
-    <div class="flex items-baseline justify-between px-1 mb-2.5"><h2 class="text-[20px] font-bold tracking-tight">Credit cards</h2><span id="accUtil" class="num text-[13px] text-muted"></span></div>
+    <div class="flex items-baseline justify-between px-1 mb-2.5"><h2 id="accCardsTitle" class="text-[20px] font-bold tracking-tight">Credit cards</h2><span id="accUtil" class="num text-[13px] text-muted"></span></div>
     <div id="accCards" class="space-y-3"></div>
   </section>
   <section id="accBanksSec" class="mt-6">
@@ -596,7 +605,8 @@ tailwind.config = {
     markAutoAnchors();
     fixRewards();
     fixZelle();
-    if (merged || firstRun) save();
+    const seeded = seedNewAccounts122();
+    if (merged || firstRun || seeded) save();
   }
 
   /* "Frost" beside "Frost Bank": a short name with no balance of its own that
@@ -621,6 +631,21 @@ tailwind.config = {
      were worked out by Truly, not typed from the bank, so mark them: entries
      pasted afterwards (even dated earlier) then count toward the balance. */
   // Rewards saved before build 112 as card payments become reward credits.
+  // Build 122: one-time add of the Quicksilver card and the SSFCU PrimeLine line of
+  // credit, as their apps showed them on Nov 21. Only for this Truly (has Frost Bank),
+  // and never over an account that is already there.
+  function seedNewAccounts122() {
+    if (settings.seed122) return false;
+    settings.seed122 = true;
+    if (!accounts['Frost Bank']) return true;
+    const now = Date.now(), names = Object.keys(accounts);
+    if (!names.some(n => /quicksilver/i.test(n)))
+      accounts['Capital One Quicksilver'] = { type: 'card', balance: 1607.13, asOf: '2026-11-21', asOfTime: now, limit: 4250, last4: '0185' };
+    if (!names.some(n => /primeline|line of credit|\bloc\b/i.test(n)))
+      accounts['SSFCU PrimeLine'] = { type: 'card', kind: 'loc', balance: 1000, asOf: '2026-11-21', asOfTime: now, limit: 1000, last4: '5171', dueDay: 3, apr: 9.75 };
+    return true;
+  }
+
   // Build 121: Zelle gets its own category; older Zelle rows move over from P2P Transfers.
   function fixZelle() {
     if (settings.zelleFix121) return;
@@ -2318,7 +2343,7 @@ tailwind.config = {
     const info = accounts[n] || {}, bd = balanceDetail(n), ink = acctFaceInk(n), card = isCardAcct(n);
     const lim = card ? Number(info.limit) || 0 : 0;
     const st = card ? cardStatus(n) : null, pct = lim ? Math.min(bd.now / lim * 100, 100) : 0;
-    const nw = card ? ((catalogEntry(n) || [])[1] || '') : (acctIcon(n) === 'vault' ? 'Savings' : 'Debit');
+    const nw = card ? (info.kind === 'loc' ? 'Line of credit' : (info.network || (catalogEntry(n) || [])[1] || '')) : (acctIcon(n) === 'vault' ? 'Savings' : 'Debit');
     const art = cardArt(n);
     const mark = art ? `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${art.fg}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="opacity:.9">${art.svg}</svg>` : '';
     const pays = !card && (settings.primaryAcct === n || defaultFrom() === n) && Object.keys(accounts).some(isCardAcct);
@@ -2352,6 +2377,7 @@ tailwind.config = {
     const cards = all.filter(isCardAcct), banks = all.filter(n => !isCardAcct(n));
     let limSum = 0, owedSum = 0;
     cards.forEach(n => { const lim = Number((accounts[n] || {}).limit) || 0; if (lim) { limSum += lim; owedSum += Math.max(balanceDetail(n).now, 0); } });
+    $('accCardsTitle').textContent = cards.some(n => (accounts[n] || {}).kind === 'loc') ? 'Cards & credit lines' : 'Credit cards';
     $('accCards').innerHTML = cards.length ? cards.map(acctFaceHtml).join('') : `<p class="px-1 text-[14px] text-muted">No cards yet. Tap + to add one.</p>`;
     $('accUtil').textContent = limSum ? Math.round(owedSum / limSum * 100) + '% of your limits used' : '';
     $('accBanksSec').classList.toggle('hidden', !banks.length);
@@ -2369,6 +2395,27 @@ tailwind.config = {
   }
 
   /* Home: what is truly yours, cash against what the cards are carrying. */
+  // Your main bank: the one set as "pays your cards", else your first bank.
+  function mainBank() {
+    const banks = sortAccts(Object.keys(accounts).filter(n => !isCardAcct(n) && acctIcon(n) !== 'swap'));
+    return banks.includes(settings.primaryAcct) ? settings.primaryAcct : (banks[0] || null);
+  }
+  function renderMainBank() {
+    const n = mainBank();
+    $('mainAcctBtn').dataset.acct = n || '';
+    if (!n) {
+      $('mainMini').innerHTML = ''; $('mainName').textContent = 'No bank yet'; $('mainKind').textContent = 'Add one in Accounts';
+      $('mainBal').textContent = '—'; $('mainSub').textContent = ''; return;
+    }
+    const info = accounts[n] || {}, bd = balanceDetail(n);
+    $('mainMini').innerHTML = miniCard(n, 44);
+    $('mainName').textContent = n;
+    $('mainKind').textContent = (acctIcon(n) === 'vault' ? 'Savings' : 'Checking') + ' · main account';
+    $('mainBal').textContent = info.asOf ? (bd.now < 0 ? '−' : '') + money(Math.abs(bd.now)) : 'Set balance';
+    $('mainBal').style.color = info.asOf && bd.now < 0 ? '#F2937C' : '#F3F6FA';
+    $('mainSub').textContent = info.asOf ? 'Updated with everything you’ve logged' : 'Tap to add what your bank shows';
+  }
+
   function renderHero(cash, owed, nBanks, nCards) {
     const netEl = $('heroNet'), sub = $('heroSub'), bar = $('heroBar'), lbl = $('heroBarLbl');
     if (!nBanks && !nCards) {
@@ -2379,8 +2426,10 @@ tailwind.config = {
     }
     const net = cash - owed;
     netEl.textContent = (net < 0 ? '\u2212' : '') + money(Math.abs(net));
-    netEl.style.color = net < 0 ? '#F2937C' : '#3CCB8F';
+    netEl.style.color = net < 0 ? '#F2A08C' : '#3CCB8F';
     sub.textContent = money(cash) + ' cash · ' + money(owed) + ' owed on cards';
+    $('heroOwed').textContent = nCards ? money(owed) : '—';
+    renderMainBank();
     const total = cash + owed;
     if (total > 0) {
       const cp = cash / total * 100;
@@ -2459,6 +2508,7 @@ tailwind.config = {
     [/\bventure\b/i,                                       '#5B83C0'],
     [/\bsavor\b/i,                                         '#DD6A50'],
     [/\bquicksilver\b/i,                                   '#98A4B2'],
+    [/\bprimeline\b/i,                                     '#2F62B8'],   // credit-union blue
     [/\bcapital ?one\b/i,                                  '#E2614A'],
     [/\bfrost\b/i,                                         '#3F7CB8'],
     [/\b(discover)\b/i,                                    '#E09E3F'],
@@ -2993,6 +3043,7 @@ tailwind.config = {
     const cards = names.filter(isCardAcct), banks = names.filter(n => !isCardAcct(n));
 
     $('homeCardsSec').classList.toggle('hidden', !cards.length);
+    $('homeCardsTitle').textContent = cards.some(n => (accounts[n] || {}).kind === 'loc') ? 'Cards & credit' : 'Cards';
     let withDue = 0, paid = 0;
     $('acctList').innerHTML = cards.map(n => {
       const info = accounts[n] || {}, bd = balanceDetail(n), lim = Number(info.limit) || 0;
@@ -3000,20 +3051,22 @@ tailwind.config = {
       if (st) { withDue++; if (st.ok) paid++; }
       const sub = st ? `<span style="color:${st.ok ? '#8FD9B6' : st.col}">${esc(st.ok ? st.full : st.full)}</span>`
         : `<span>${map[n].n ? money(map[n].out) + ' charged this month' : 'No due date set'}</span>`;
+      const locTag = info.kind === 'loc' ? '<span class="text-muted">Line of credit · </span>' : '';
       const right = info.asOf
         ? `<span class="num block text-[16px] font-semibold">${money(bd.now)}</span><span class="num block text-[13px] text-muted mt-0.5">${lim ? Math.round(Math.max(bd.now, 0) / lim * 100) + '% used' : 'owed'}</span>`
         : `<span class="num block text-[16px] font-semibold">${money(map[n].out)}</span><span class="block text-[13px] text-muted mt-0.5">spent</span>`;
       return `<button class="w-full text-left flex items-center gap-3 px-4 py-3.5 active:bg-page" data-acct="${esc(n)}">
           ${miniCard(n, 48)}
-          <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(shortAcct(n))}</span><span class="num block text-[13px] mt-0.5 truncate">${sub}</span></span>
+          <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(shortAcct(n))}</span><span class="num block text-[13px] mt-0.5 truncate">${locTag}${sub}</span></span>
           <span class="text-right shrink-0">${right}</span>
         </button>`;
     }).join('');
     $('cardsBadge').innerHTML = withDue && paid === withDue
       ? `<span class="text-[13px] font-semibold flex items-center gap-1 rounded-xl px-2.5 py-1.5" style="color:#3CCB8F;background:#15302A"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>All paid this cycle</span>` : '';
 
-    $('homeCashSec').classList.toggle('hidden', !banks.length);
-    $('cashList').innerHTML = banks.map(n => bankRowHtml(n)).join('');
+    const otherBanks = banks.filter(n => n !== mainBank());
+    $('homeCashSec').classList.toggle('hidden', !otherBanks.length);
+    $('cashList').innerHTML = otherBanks.map(n => bankRowHtml(n)).join('');
 
     const chips = ['All'].concat(sortAccts(active));   // filter by accounts with rows
     if (!chips.includes(acctFilter)) acctFilter = 'All';
@@ -4349,6 +4402,8 @@ tailwind.config = {
   }));
   $('recentList').addEventListener('click', function (e) { const r = e.target.closest('[data-edit]'); if (r) openEdit(r.getAttribute('data-edit')); });
   $('seeAllTx').onclick = () => showTab('activity');
+  $('mainAcctBtn').onclick = function () { const n = this.dataset.acct; if (n) openAcctSheet(n); else showTab('cards'); };
+  document.querySelector('[data-goaccts]').onclick = () => showTab('cards');
   $('homeMonth').addEventListener('click', function (e) {
     if (e.target.closest('[data-income]')) { $('editIncome').click(); return; }
     const f = e.target.closest('[data-flow]'); if (f) openFlow(f.getAttribute('data-flow'));
@@ -5094,7 +5149,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-21 · 121';
+  const BUILD = '2026-11-21 · 122';
 
   /* =============================================================
      KEEPING THE DATA
