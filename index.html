@@ -2429,8 +2429,8 @@ tailwind.config = {
         <span class="absolute inset-0 flex flex-col justify-between p-4">
           <span class="flex justify-between items-start gap-2"><span class="text-[15px] font-semibold truncate">${esc(card ? shortAcct(n) : n)}</span>${pill}</span>
           <span class="flex items-center gap-2.5">
-            <span class="block rounded-[5px]" style="width:34px;height:25px;background:linear-gradient(135deg,#E9DFC2,#B7A985);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.75"><path d="M7 9a4.5 4.5 0 0 1 0 6M10.5 6.5a8 8 0 0 1 0 11M14 4a11.5 11.5 0 0 1 0 16"/></svg>
+            ${card && info.kind !== 'loc' ? `<span class="block rounded-[5px]" style="width:34px;height:25px;background:linear-gradient(135deg,#E9DFC2,#B7A985);box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)"></span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:.75"><path d="M7 9a4.5 4.5 0 0 1 0 6M10.5 6.5a8 8 0 0 1 0 11M14 4a11.5 11.5 0 0 1 0 16"/></svg>` : ''}
             ${mark ? `<span class="ml-auto">${mark}</span>` : ''}
           </span>
           <span class="flex justify-between items-end gap-2">
@@ -2462,7 +2462,7 @@ tailwind.config = {
     const pays = Object.keys(accounts).some(c => isCardAcct(c)) && (settings.primaryAcct === n || defaultFrom() === n);
     return `<button data-acct="${esc(n)}" class="w-full flex items-center gap-3 px-4 py-3.5 text-left active:bg-page">
         ${miniCard(n, 48)}
-        <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted">${kind}${pays ? ' · pays your cards' : ''}</span></span>
+        <span class="flex-1 min-w-0"><span class="block text-[16px] font-semibold truncate">${esc(n)}</span><span class="block text-[13px] text-muted">${n === mainBank() ? 'Main · ' : ''}${kind}${pays ? ' · pays your cards' : ''}</span></span>
         <span class="num text-[16px] font-semibold shrink-0" style="color:${info.asOf ? (bd.now >= 0 ? '#3CCB8F' : '#F2937C') : '#93A1AE'}">${info.asOf ? money(bd.now) : 'Set balance'}</span>
       </button>`;
   }
@@ -3140,9 +3140,9 @@ tailwind.config = {
     $('cardsBadge').innerHTML = withDue && paid === withDue
       ? `<span class="text-[13px] font-semibold flex items-center gap-1 rounded-xl px-2.5 py-1.5" style="color:#3CCB8F;background:#15302A"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>All paid this cycle</span>` : '';
 
-    const otherBanks = banks.filter(n => n !== mainBank());
-    $('homeCashSec').classList.toggle('hidden', !otherBanks.length);
-    $('cashList').innerHTML = otherBanks.map(n => bankRowHtml(n)).join('');
+    const main = mainBank(), allBanks = main && banks.includes(main) ? [main].concat(banks.filter(n => n !== main)) : banks;
+    $('homeCashSec').classList.toggle('hidden', !allBanks.length);
+    $('cashList').innerHTML = allBanks.map(n => bankRowHtml(n)).join('');
 
     const chips = ['All'].concat(sortAccts(active));   // filter by accounts with rows
     if (!chips.includes(acctFilter)) acctFilter = 'All';
@@ -5446,7 +5446,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-23 · 127';
+  const BUILD = '2026-11-23 · 128';
 
   /* =============================================================
      KEEPING THE DATA
