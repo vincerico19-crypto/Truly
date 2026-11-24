@@ -612,7 +612,8 @@ tailwind.config = {
     const loced = locDetails124();
     const carded = cardDetails125();
     const saved127 = frostSavings127();
-    if (merged || firstRun || seeded || looked || loced || carded || saved127) save();
+    const adv129 = locAdvance129();
+    if (merged || firstRun || seeded || looked || loced || carded || saved127 || adv129) save();
   }
 
   /* "Frost" beside "Frost Bank": a short name with no balance of its own that
@@ -641,6 +642,13 @@ tailwind.config = {
   // credit, as their apps showed them on Nov 21. Only for this Truly (has Frost Bank),
   // and never over an account that is already there.
   // Build 125: each card's details, as their apps and statement showed them on Nov 21.
+  // Line of credit advances saved before Truly knew them: no longer spending.
+  function locAdvance129() {
+    if (settings.locAdv129) return false;
+    settings.locAdv129 = true;
+    transactions.forEach(t => { if (!t.advance && (t.cat === 'LOC Advance' || isLocAdvanceDesc(t.desc))) markAdvance(t); });
+    return true;
+  }
   function frostSavings127() {
     if (settings.savings127) return false;
     settings.savings127 = true;
@@ -954,7 +962,13 @@ tailwind.config = {
      same dollars you already logged as charges on the card — counting both
      would double your month. These get flagged and kept out of the totals. */
   const XFER_HINTS = /\b(payment thank you|thank you payment|autopay|auto ?pay|card ?payment|payment to (card|credit)|credit card (pmt|payment)|online payment|bill ?pay|epay|payment received|transfer (to|from)|xfer|internal transfer|to savings|from savings|move to|principal payment|statement payment|line of credit|loc payment|transfer loc|loan payment|to loc|to account \d|from account \d|to account|from account|to account savings|from account savings|to savings|from savings|savings transfer|to checking|from checking|internal xfer|between accounts|acct transfer|electronic payment|online payment|scheduled payment|bill payment|card payment|cash ?back reward|statement credit|rewards? credit|rewards? redemption|redeem(ed)? rewards?|credit-cash ?back|rewards? applied|cash ?back applied|credit balance refund)\b/i;
+  /* "MOBILE LOC ADV", "LINE OF CREDIT ADVANCE", "ADVANCE FROM LOC": borrowing from a
+     line of credit. Money moves from the line into checking, so it is not spending
+     or income: what you owe on the line goes up and so does the bank balance. */
+  const LOC_ADV_RE = /\b(loc|line of credit|primeline|credit line|heloc)\s*(adv|advance|draw|disbursement)\b|\b(advance|draw|disbursement)\s+(from|on)\s+(loc|line|line of credit|primeline)\b|\bloan advance\b/i;
+  function isLocAdvanceDesc(text) { return LOC_ADV_RE.test(String(text || '')); }
   function looksLikeTransfer(text) {
+    if (isLocAdvanceDesc(text)) return true;
     if (/\bpayroll|direct dep|paycheck\b/i.test(text)) return false;   // that is real income
     // "Credit-Travel Reward", "Credit-Cash Back Reward", "Credit-Points Redemption"
     if (/\bcredit\b/i.test(text) && /\breward|redemption|redeem|cash ?back|points|miles|streaming|statement|benefit|offer|monthly|annual|subscription\b/i.test(text)) return true;
@@ -1087,6 +1101,7 @@ tailwind.config = {
     'Phone':          ['#4F93D6', 'phone', '📱'],
     'Personal Care':  ['#B266A8', 'scissors', '💈'],
     'Zelle':          ['#7B5CD6', 'swap', '💸'],     // money sent to a person
+    'LOC Advance':    ['#3E9BB8', 'inflow', '💰'],   // money borrowed from a line of credit into checking
     'P2P Transfers':  ['#4F93D6', 'swap', '📲'],     // Venmo, Cash App, PayPal
     'Rewards':        ['#C9A04A', 'tag', '🎁'],      // cash back or points redeemed
     'Income':         ['#35C08A', 'inflow', '💵'],   // money in is green
@@ -1221,6 +1236,7 @@ tailwind.config = {
   // Money moved between your own accounts or paid to a card.
   function xferEmoji(t) {
     const d = (t && t.desc) || '';
+    if (t && (t.advance || isLocAdvanceDesc(d))) return '💰';                 // borrowed from the line
     if (/\b(loc|loan|line of credit|heloc|lending)\b/i.test(d)) return '🧾';   // paying down a loan
     if (/\b(zelle|venmo|cash ?app|paypal)\b/i.test(d) || /^\s*to\s+(?!savings|checking|account|parents|ssfcu)/i.test(d)) return '💸';
     if (t.payTo || /\b(payment to|pmt|payment|autopay|thank you|capital one|amex|american express|discover|chase card|citi|synchrony)\b/i.test(d) || (() => { const p = payTarget(t); return p && accounts[p] && acctIcon(p) === 'card'; })()) return '💳';
@@ -1335,6 +1351,7 @@ tailwind.config = {
   function guessCategory(desc, isIncome) {
     const learned = rememberedCat(desc);
     if (learned) return learned;
+    if (isLocAdvanceDesc(desc)) return 'LOC Advance';
     if (isIncome) return 'Income';
     for (const [re, cat] of CAT_RULES) if (re.test(desc)) return cat;
     return 'Uncategorized';
@@ -1991,7 +2008,7 @@ tailwind.config = {
      REVIEW STEP
   ============================================================= */
   function knownCategories() {
-    const set = new Set(['Groceries','Housing','Transportation','Utilities','Dining','Shopping','Health','Subscriptions','Entertainment','Insurance','Giving','Fitness','Family','Debt & Fees','Savings','Zelle','Income','Uncategorized']);
+    const set = new Set(['Groceries','Housing','Transportation','Utilities','Dining','Shopping','Health','Subscriptions','Entertainment','Insurance','Giving','Fitness','Family','Debt & Fees','Savings','Zelle','LOC Advance','Income','Uncategorized']);
     transactions.forEach(t => set.add(t.cat));
     Object.values(catMap).forEach(c => set.add(c));
     return Array.from(set).sort();
@@ -2103,7 +2120,7 @@ tailwind.config = {
         <div class="flex gap-2">
           <input class="cell num text-[13px]" type="date" value="${esc(r.date)}" data-i="${i}" data-f="date" aria-label="Date">
           <div class="flex gap-1.5 shrink-0">
-            <button class="w-14 rounded-[.6rem] border text-[12px] font-semibold ${r.dir === 'in' ? 'border-income/40 bg-income/10 text-income' : r.dir === 'xfer' ? 'border-white/25 bg-white/10 text-ink' : 'border-line bg-page text-muted'}" data-i="${i}" data-f="dir">${r.dir === 'in' ? 'In' : r.dir === 'xfer' ? 'Payment' : 'Out'}</button>
+            <button class="w-14 rounded-[.6rem] border text-[12px] font-semibold ${r.dir === 'in' ? 'border-income/40 bg-income/10 text-income' : r.dir === 'xfer' ? 'border-white/25 bg-white/10 text-ink' : 'border-line bg-page text-muted'}" data-i="${i}" data-f="dir">${r.dir === 'in' ? 'In' : r.dir === 'xfer' ? (r.cat === 'LOC Advance' ? 'Move' : 'Payment') : 'Out'}</button>
             <input class="cell num text-[14px] font-semibold w-24 text-right" type="number" inputmode="decimal" step="0.01" value="${r.amount}" data-i="${i}" data-f="amount" aria-label="Amount">
           </div>
         </div>
@@ -2291,6 +2308,7 @@ tailwind.config = {
   ];
   function niceDesc(t) {
     const d = typeof t === 'string' ? t : (t.desc || '');
+    if (t && typeof t === 'object' && t.advance) return t.payTo ? (t.amount < 0 ? 'Advance from ' : 'Advance to ') + shortAcct(t.payTo) : 'Line of credit advance';
     if (t && typeof t === 'object' && t.xfer && t.payTo) return (isCardAcct(t.payTo) ? 'Paid ' : (t.amount < 0 ? 'From ' : 'To ')) + shortAcct(t.payTo);
     for (const [re, name] of NICE_DESC) if (re.test(d)) return name;
     const m = d.match(/^([^*]{2,})\*\s*(.+)$/);
@@ -2519,6 +2537,31 @@ tailwind.config = {
   }
 
   function isCardAcct(n) { return acctIcon(n) === 'card'; }
+  function locAccount() {
+    const n = Object.keys(accounts).filter(a => (accounts[a] || {}).kind === 'loc');
+    return n.length ? n[0] : null;
+  }
+  /* One advance, logged from either side. On the line it is a plus (you owe more)
+     and payTo is the bank it landed in; on the bank it is a minus (money came in)
+     and payTo is the line. */
+  function markAdvance(t) {
+    t.advance = true; t.xfer = true; t.cat = 'LOC Advance';
+    if (isCardAcct(t.acct || 'Unassigned')) {
+      t.amount = Math.abs(t.amount);
+      if (!t.payTo || isCardAcct(t.payTo)) { const b = mainBank(); if (b) t.payTo = b; else delete t.payTo; }
+    } else {
+      t.amount = -Math.abs(t.amount);
+      const l = locAccount(); if (l) t.payTo = l; else delete t.payTo;
+    }
+    return t;
+  }
+  function unmarkAdvance(t) { delete t.advance; }
+  // The same advance logged on the other account too: count it once.
+  function advanceTwin(name, t) {
+    const amt = Math.abs(t.amount);
+    return transactions.some(c => c !== t && c.advance && (c.acct || 'Unassigned') === name &&
+      Math.abs(Math.abs(c.amount) - amt) < 0.005 && daysApart(c.date, t.date) <= 5);
+  }
 
   /* Your order for accounts, used on Home, in Cards and in the pickers.
      Change it with the arrows in the Cards tab. Accounts not in the list
@@ -2551,7 +2594,8 @@ tailwind.config = {
     list.forEach(t => {
       const k = t.acct || 'Unassigned';
       if (!map[k]) map[k] = { out: 0, in: 0, paid: 0, n: 0 };
-      if (t.xfer) map[k].paid += Math.abs(t.amount);
+      if (t.advance) { if (t.amount > 0) map[k].out += t.amount; else map[k].in += Math.abs(t.amount); }
+      else if (t.xfer) map[k].paid += Math.abs(t.amount);
       else if (t.amount < 0) map[k].in += Math.abs(t.amount);
       else map[k].out += t.amount;
       map[k].n++;
@@ -2657,6 +2701,13 @@ tailwind.config = {
       if (!counts) return;
       const mine = (t.acct || 'Unassigned') === name;
 
+      if (t.advance) {
+        if (!(mine || payTarget(t) === name)) return;
+        if (!mine && advanceTwin(name, t)) return;
+        inflow += isBank ? Math.abs(t.amount) : 0;     // the bank gets the money
+        outflow += isBank ? 0 : Math.abs(t.amount);    // the line is owed more
+        return;
+      }
       if (t.xfer) {
         if (!(mine || payTarget(t) === name)) return;
         /* On a bank, a plus amount left the account and a minus came in.
@@ -2684,7 +2735,7 @@ tailwind.config = {
     if (isPayingBank(name)) {
       const bankSide = transactions.filter(t => t.xfer && (t.acct || 'Unassigned') === name);
       transactions.forEach(t => {
-        if (!t.xfer || t.amount <= 0) return;
+        if (!t.xfer || t.advance || t.amount <= 0) return;
         // a reward or credit posted by the card issuer costs you nothing
         if (/\b(reward|cash ?back|statement credit|redemption|redeem|refund|credit balance)\b/i.test(t.desc || '')) return;
         const on = t.acct || 'Unassigned';
@@ -3068,7 +3119,7 @@ tailwind.config = {
     const since = iso(start.getFullYear(), start.getMonth() + 1, start.getDate());
     const today = todayISO();
     const hits = transactions.filter(t =>
-      t.xfer && t.date >= since && t.date <= today && !isIssuerCredit(t.desc) &&
+      t.xfer && !t.advance && t.date >= since && t.date <= today && !isIssuerCredit(t.desc) &&
       ((t.acct || 'Unassigned') === name || (payTarget(t) === name && !cardSideTwin(name, t))));
     if (!hits.length) return null;
     hits.sort((a, b) => b.date.localeCompare(a.date));
@@ -3583,7 +3634,8 @@ tailwind.config = {
        the bank's side (that's where the money left), so pull them in here —
        unless the card's own statement already shows the same payment. */
     const incoming = transactions.filter(t => t.xfer && t.date.slice(0, 7) === viewMonth &&
-      (t.acct || 'Unassigned') !== name && payTarget(t) === name && (sheetIsBank || !cardSideTwin(name, t)));
+      (t.acct || 'Unassigned') !== name && payTarget(t) === name &&
+      (t.advance ? !advanceTwin(name, t) : (sheetIsBank || !cardSideTwin(name, t))));
     const inSet = new Set(incoming);
     const rows = transactions
       .filter(t => (t.acct || 'Unassigned') === name && t.date.slice(0, 7) === viewMonth)
@@ -3592,18 +3644,19 @@ tailwind.config = {
 
     const out = rows.filter(t => t.amount > 0 && !t.xfer).reduce((s, t) => s + t.amount, 0);
     const inn = rows.filter(t => t.amount < 0 && !t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
-    const paid = rows.filter(t => t.xfer).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const paid = rows.filter(t => t.xfer && !t.advance).reduce((s, t) => s + Math.abs(t.amount), 0);
+    const advanced = rows.filter(t => t.advance).reduce((s, t) => s + Math.abs(t.amount), 0);
     /* Same rules as the balance itself. A card: charges add to what you owe,
        payments and refunds take it down. A bank: a transfer's sign says which
        way it went (minus came in, plus went out). */
     const acctIsBank = acctIcon(name) === 'bank' || acctIcon(name) === 'vault';
-    const paidIn = incoming.reduce((s, t) => s + Math.abs(t.amount), 0);
+    const paidIn = incoming.filter(t => !t.advance).reduce((s, t) => s + Math.abs(t.amount), 0);
     // A transfer from another account into this one is written on that account: its signs flip here.
     const cameIn = t => inSet.has(t) ? t.amount > 0 : t.amount < 0;
     const xferIn = rows.filter(t => t.xfer && cameIn(t)).reduce((s, t) => s + Math.abs(t.amount), 0);
     const xferOut = rows.filter(t => t.xfer && !cameIn(t)).reduce((s, t) => s + Math.abs(t.amount), 0);
     const net = acctIsBank ? inn + xferIn - out - xferOut      // change in cash
-                           : out - inn - paid;                 // change in what you owe
+                           : out + advanced - inn - paid;      // change in what you owe
 
     $('acctSheetHead').innerHTML = `
       ${acctTile(name, 45, 20, '.6rem')}
@@ -3681,6 +3734,7 @@ tailwind.config = {
         <p class="num text-[30px] leading-none font-semibold tracking-tight mt-1 ${net > 0 ? 'text-over' : 'text-income'}">${net > 0 ? '+' : net < 0 ? '\u2212' : ''}${money(Math.abs(net))}</p>
         <div class="mt-4 space-y-1.5 text-[13px]">
           <div class="flex justify-between"><span class="text-muted">Charged</span><span class="num font-medium">+${money(out)}</span></div>
+          ${advanced ? `<div class="flex justify-between"><span class="text-muted">Advances to your bank</span><span class="num font-medium">+${money(advanced)}</span></div>` : ''}
           ${inn ? `<div class="flex justify-between"><span class="text-muted">Refunds</span><span class="num font-medium text-income">\u2212${money(inn)}</span></div>` : ''}
           ${paid ? `<div class="flex justify-between"><span class="text-muted">${paidIn && paidIn === paid ? 'Payments' : 'Payments &amp; credits'}</span><span class="num font-medium" style="color:#4F93D6">\u2212${money(paid)}</span></div>` : ''}
         </div>`}
@@ -3712,10 +3766,10 @@ tailwind.config = {
       <div class="flex items-center gap-3 px-5 py-3 border-b border-line active:bg-page ${on ? 'bg-page/60' : ''}" data-${selectMode ? 'sel' : 'edit'}="${t.id}">
         ${mark}
         <div class="min-w-0 flex-1">
-          <p class="text-[16px] font-medium truncate">${inSet.has(t) ? (sheetIsBank ? (t.amount > 0 ? 'Transfer in' : 'Transfer out') : 'Payment') : esc(t.desc)}</p>
-          <p class="num text-[13px] text-muted truncate">${esc(dayLabel(t.date))} · ${inSet.has(t) ? (sheetIsBank && t.amount < 0 ? 'to ' : 'from ') + esc(t.acct || 'Unassigned') : t.xfer ? (t.payTo && !isCardAcct(t.payTo) ? 'Transfer to ' + esc(t.payTo) : 'Payment') : esc(t.cat)}</p>
+          <p class="text-[16px] font-medium truncate">${t.advance ? 'Line of credit advance' : inSet.has(t) ? (sheetIsBank ? (t.amount > 0 ? 'Transfer in' : 'Transfer out') : 'Payment') : esc(t.desc)}</p>
+          <p class="num text-[13px] text-muted truncate">${esc(dayLabel(t.date))} · ${t.advance ? (sheetIsBank ? 'from ' + esc(shortAcct(inSet.has(t) ? t.acct : (t.payTo || 'your line'))) : 'to ' + esc(shortAcct(inSet.has(t) ? t.acct : (t.payTo || 'your bank')))) : inSet.has(t) ? (sheetIsBank && t.amount < 0 ? 'to ' : 'from ') + esc(t.acct || 'Unassigned') : t.xfer ? (t.payTo && !isCardAcct(t.payTo) ? 'Transfer to ' + esc(t.payTo) : 'Payment') : esc(t.cat)}</p>
         </div>
-        <div class="num text-[16px] font-semibold shrink-0 ${t.amount < 0 && !t.xfer ? 'text-income' : ''}" ${t.xfer ? 'style="color:#4F93D6"' : ''}>${inSet.has(t) ? (sheetIsBank ? (t.amount > 0 ? '+' : '\u2212') : '\u2212') + money(Math.abs(t.amount)) : t.xfer ? (t.amount < 0 ? '+' : '') + money(Math.abs(t.amount)) : t.amount < 0 ? '+' + money(Math.abs(t.amount)) : money(t.amount)}</div>
+        <div class="num text-[16px] font-semibold shrink-0 ${t.amount < 0 && !t.xfer ? 'text-income' : ''}" ${t.xfer ? 'style="color:#4F93D6"' : ''}>${t.advance ? (sheetIsBank ? '+' : '') + money(Math.abs(t.amount)) : inSet.has(t) ? (sheetIsBank ? (t.amount > 0 ? '+' : '\u2212') : '\u2212') + money(Math.abs(t.amount)) : t.xfer ? (t.amount < 0 ? '+' : '') + money(Math.abs(t.amount)) : t.amount < 0 ? '+' + money(Math.abs(t.amount)) : money(t.amount)}</div>
         ${selectMode ? '' : '<svg class="shrink-0 text-muted -mr-1" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>'}
       </div>`;
     }).join('')
@@ -4817,6 +4871,8 @@ tailwind.config = {
     t.acct = resolveAcct(titleCaseAcct($('editAcct').value)) || 'Unassigned';
     t.xfer = editDir === 'xfer';
     t.amount = editDir === 'in' ? -amt : amt;
+    if (cat === 'LOC Advance') markAdvance(t);
+    else if (t.advance) { unmarkAdvance(t); if (t.payTo && !isCardAcct(t.payTo) && !t.xfer) delete t.payTo; }
     learn(t.desc, cat);                    // remember this merchant's category
     mergeAliasAccounts();
     save(); refreshOpenSheets(); closeEdit(); toast('Transaction updated');
@@ -5129,8 +5185,15 @@ tailwind.config = {
       if (r.dir === 'xfer' && r.payTo && r.payTo !== 'none') out.payTo = r.payTo;
       const own = ownAccountTransfer(out);
       if (own) { out.xfer = true; out.cat = 'Transfer'; out.payTo = own.to; out.amount = own.out ? Math.abs(out.amount) : -Math.abs(out.amount); }
+      if (out.cat === 'LOC Advance' || (!own && isLocAdvanceDesc(out.desc))) markAdvance(out);
       return out;
     }).filter(t => {
+      // An advance already logged from the line's side or the bank's side.
+      if (t.advance) {
+        const twin = t.payTo && advanceTwin(t.payTo, t);
+        if (twin) skippedTwins++;
+        return !twin;
+      }
       // The same transfer pasted from the other account's statement: already counted.
       if (!t.xfer || !t.payTo || isCardAcct(t.payTo)) return true;
       const twin = transactions.some(c => c.xfer && (c.acct || 'Unassigned') === t.payTo && c.payTo === t.acct &&
@@ -5446,7 +5509,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-23 · 128';
+  const BUILD = '2026-11-23 · 129';
 
   /* =============================================================
      KEEPING THE DATA
