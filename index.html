@@ -263,8 +263,8 @@ tailwind.config = {
   </div>
   <button id="cardsPay" class="hidden" tabindex="-1" aria-hidden="true"></button>
   <section class="mt-3 grid grid-cols-2 gap-2.5">
-    <div class="bg-card rounded-[18px] border border-line px-4 py-3.5"><p class="text-[13px] text-muted">Cash</p><p id="accCash" class="num text-[22px] font-bold mt-1" style="color:#3CCB8F">—</p></div>
-    <div class="bg-card rounded-[18px] border border-line px-4 py-3.5"><p class="text-[13px] text-muted">Owed on cards</p><p id="accOwed" class="num text-[22px] font-bold mt-1">—</p></div>
+    <button data-flow="cash" class="text-left bg-card rounded-[18px] border border-line px-4 py-3.5 active:bg-line"><span class="flex items-center justify-between gap-1"><span class="text-[13px] text-muted">Cash</span><svg class="shrink-0 text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></span><span id="accCash" class="num block text-[22px] font-bold mt-1" style="color:#3CCB8F">—</span></button>
+    <button data-flow="owed" class="text-left bg-card rounded-[18px] border border-line px-4 py-3.5 active:bg-line"><span class="flex items-center justify-between gap-1"><span class="text-[13px] text-muted truncate">Owed on credit</span><svg class="shrink-0 text-muted" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></span><span id="accOwed" class="num block text-[22px] font-bold mt-1">—</span></button>
   </section>
   <section id="accCardsSec" class="mt-6">
     <div class="flex items-baseline justify-between px-1 mb-2.5"><h2 id="accCardsTitle" class="text-[20px] font-bold tracking-tight">Credit cards</h2><span id="accUtil" class="num text-[13px] text-muted"></span></div>
@@ -3258,8 +3258,86 @@ tailwind.config = {
     if (p > 99 && p < 100) return '99%';
     return Math.round(p) + '%';
   }
+  // The same accounts the Cash and Owed totals add up.
+  function cashAccts() { return sortAccts(Object.keys(accounts).filter(n => { const k = acctIcon(n); return (k === 'bank' || k === 'vault') && accounts[n] && Number(accounts[n].balance) > 0; })); }
+  function owedAccts() { return sortAccts(Object.keys(accounts).filter(n => { const k = acctIcon(n); return k !== 'bank' && k !== 'vault' && accounts[n] && Number(accounts[n].balance) > 0; })); }
+
+  /* Cash / Owed tiles: each account's balance, then this month's money in
+     (deposits, credits, transfers in) or what the cards moved. */
+  function renderBalanceFlow() {
+    const isCash = flowDetail === 'cash';
+    const names = isCash ? cashAccts() : owedAccts();
+    const set = new Set(names);
+    const month = monthShort(viewMonth).split(' ')[0];
+    const total = names.reduce((a, n) => a + balanceDetail(n).now, 0);
+    const col = isCash ? '#35C08A' : '#E9EEF3';
+    $('flowSheetHead').innerHTML = `
+      <div class="w-10 h-10 rounded-xl grid place-items-center shrink-0" style="background:${isCash ? '#173A2F' : '#2A2F36'}">
+        <span aria-hidden="true" style="font-size:21px;line-height:1;font-family:'Apple Color Emoji','Noto Color Emoji',sans-serif">${isCash ? '🏦' : '💳'}</span>
+      </div>
+      <div class="min-w-0"><h3 class="text-[17px] font-semibold">${isCash ? 'Cash' : 'Owed on cards &amp; credit'}</h3><p class="text-[13px] text-muted">${names.length} account${names.length === 1 ? '' : 's'} · ${esc(month)} activity below</p></div>`;
+    if (!names.length) { $('flowSheetBody').innerHTML = `<p class="px-5 py-10 text-center text-[14px] text-muted">Set a balance on an account to see it here.</p>`; return; }
+
+    // By account
+    let limSum = 0;
+    const acctRows = names.map(n => {
+      const bal = balanceDetail(n).now, lim = Number((accounts[n] || {}).limit) || 0;
+      if (lim) limSum += lim;
+      const sub = isCash ? (acctIcon(n) === 'vault' ? 'Savings' : 'Checking') + (n === mainBank() ? ' · Main' : '')
+        : ((accounts[n] || {}).kind === 'loc' ? 'Line of credit' : 'Credit card') + (lim ? ' · ' + Math.round(bal / lim * 100) + '% of ' + money(lim).replace('.00', '') : '');
+      return `<button data-flowacct="${esc(n)}" class="w-full flex items-center gap-3 px-5 py-3 text-left active:bg-page">
+          ${miniCard(n, 44)}
+          <span class="flex-1 min-w-0"><span class="block text-[15px] font-semibold truncate">${esc(isCash ? n : shortAcct(n))}</span><span class="block text-[12px] text-muted truncate">${esc(sub)}</span></span>
+          <span class="text-right shrink-0"><span class="num block text-[15px] font-semibold" style="color:${col}">${money(bal)}</span><span class="block text-[11px] text-muted">${total > 0 ? sharePct(bal, total) : ''}</span></span>
+        </button>`;
+    }).join('');
+
+    // This month's rows on these accounts. A transfer logged on the other side counts too.
+    const inMonth = t => t.date.slice(0, 7) === viewMonth;
+    // Moving money between two of these accounts changes neither total.
+    const inside = t => t.xfer && !t.advance && set.has(payTarget(t)) && payTarget(t) !== (t.acct || 'Unassigned');
+    const own = transactions.filter(t => inMonth(t) && set.has(t.acct || 'Unassigned') && !inside(t));
+    const other = transactions.filter(t => inMonth(t) && t.xfer && !t.advance && !set.has(t.acct || 'Unassigned') && set.has(payTarget(t)) &&
+      (isCash || !cardSideTwin(payTarget(t), t)));
+    const sortD = a => a.sort((x, y) => y.date.localeCompare(x.date) || (y.at || 0) - (x.at || 0));
+    const row = (t, sign, c, sub) => `<div class="flex items-center gap-3 px-5 py-3 border-b border-line active:bg-page" data-edit="${t.id}">
+        ${txChip(t, 30)}
+        <div class="min-w-0 flex-1"><p class="text-[15px] font-medium truncate">${esc(niceDesc(t))}</p><p class="num text-[12px] text-muted truncate">${esc(dayLabel(t.date))} · ${esc(sub)}</p></div>
+        <div class="num text-[15px] font-semibold shrink-0" style="color:${c}">${sign}${money(Math.abs(t.amount))}</div>
+      </div>`;
+    const section = (title, list, sum, c, sign) => list.length ? `
+      <div class="px-5 pt-4 pb-1 flex items-baseline justify-between"><p class="text-[15px] font-bold tracking-tight">${title}</p><span class="num text-[14px] font-semibold" style="color:${c}">${sign}${money(sum)}</span></div>
+      <div class="border-b border-line">${list.join('')}</div>` : '';
+    const sumAbs = l => l.reduce((a, t) => a + Math.abs(t.amount), 0);
+    let body = '';
+    if (isCash) {
+      // Money in: deposits, credits, refunds, transfers in. Money out: everything else.
+      const inOwn = own.filter(t => t.amount < 0), inOther = other.filter(t => t.amount > 0);
+      const outOwn = own.filter(t => t.amount > 0), outOther = other.filter(t => t.amount < 0);
+      const ins = sortD(inOwn.concat(inOther)), outs = sortD(outOwn.concat(outOther));
+      const sub = t => (inOther.includes(t) || outOther.includes(t) ? (t.amount > 0 ? 'from ' : 'to ') + shortAcct(t.acct || 'Unassigned') + ' → ' + shortAcct(payTarget(t)) : shortAcct(t.acct || 'Unassigned') + ' · ' + (t.xfer ? (t.advance ? 'LOC advance' : 'Transfer') : (t.cat || 'Income')));
+      body = section('Deposits &amp; credits in ' + esc(month), ins.map(t => row(t, '+', '#35C08A', sub(t))), sumAbs(ins), '#35C08A', '+')
+        + section('Money out in ' + esc(month), outs.map(t => row(t, '\u2212', '#E9EEF3', sub(t))), sumAbs(outs), '#93A1AE', '\u2212');
+      if (!ins.length && !outs.length) body = `<p class="px-5 py-8 text-center text-[14px] text-muted">Nothing logged on these accounts in ${esc(month)} yet.</p>`;
+    } else {
+      // Up: purchases and advances. Down: payments, refunds and rewards.
+      const ups = sortD(own.filter(t => t.amount > 0 && (!t.xfer || t.advance)));
+      const downs = sortD(own.filter(t => t.amount < 0 || (t.xfer && !t.advance)).concat(other));
+      const sub = t => (other.includes(t) ? 'Paid ' + shortAcct(payTarget(t)) + ' from ' + shortAcct(t.acct || 'Unassigned') : shortAcct(t.acct || 'Unassigned') + ' · ' + (t.advance ? 'LOC advance' : t.xfer ? 'Payment' : isReward(t) ? 'Reward' : t.amount < 0 ? 'Refund' : (t.cat || 'Uncategorized')));
+      body = section('Charges &amp; advances in ' + esc(month), ups.map(t => row(t, '+', '#E9EEF3', sub(t))), sumAbs(ups), '#E9EEF3', '+')
+        + section('Payments &amp; credits in ' + esc(month), downs.map(t => row(t, '\u2212', '#4F93D6', sub(t))), sumAbs(downs), '#4F93D6', '\u2212');
+      if (!ups.length && !downs.length) body = `<p class="px-5 py-8 text-center text-[14px] text-muted">Nothing logged on these accounts in ${esc(month)} yet.</p>`;
+    }
+    const stats = `<div class="px-5 py-4 border-b border-line">
+        <p class="num text-[32px] leading-none font-bold tracking-tight" style="color:${col}">${money(total)}</p>
+        <p class="text-[13px] text-muted mt-2">${isCash ? 'In your bank accounts now' : limSum ? Math.round(total / limSum * 100) + '% of your ' + money(limSum).replace('.00', '') + ' in limits used' : 'Across your cards and lines of credit'}</p>
+      </div>`;
+    $('flowSheetBody').innerHTML = stats + `<div class="px-5 pt-4 pb-1"><p class="text-[15px] font-bold tracking-tight">By account</p></div><div class="pb-2 border-b border-line">${acctRows}</div>` + body;
+  }
+
   function renderFlow() {
     if (!flowDetail) return;
+    if (flowDetail === 'cash' || flowDetail === 'owed') return renderBalanceFlow();
     const isIn = flowDetail === 'in';
     const list = transactions.filter(t => t.date.slice(0, 7) === viewMonth && (isIn ? isMoneyIn(t) : isSpend(t)));
     const total = isIn ? list.reduce((a, t) => a + Math.abs(t.amount), 0) : Math.max(list.reduce((a, t) => a + t.amount, 0), 0);
@@ -4640,6 +4718,8 @@ tailwind.config = {
     if (e.target.closest('[data-gospending]')) { closeSheets(); showTab('spending'); return; }
     const c = e.target.closest('[data-flowcat]');
     if (c) { const name = c.getAttribute('data-flowcat'); $('flowSheet').dataset.open = 'false'; flowDetail = null; openCatSheet(name); return; }
+    const a = e.target.closest('[data-flowacct]');
+    if (a) { const name = a.getAttribute('data-flowacct'); $('flowSheet').dataset.open = 'false'; flowDetail = null; openAcctSheet(name); return; }
     const row = e.target.closest('[data-edit]');
     if (row) openEdit(row.getAttribute('data-edit'));
   });
@@ -5508,7 +5588,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-23 · 130';
+  const BUILD = '2026-11-24 · 131';
 
   /* =============================================================
      KEEPING THE DATA
