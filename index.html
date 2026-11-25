@@ -976,6 +976,8 @@ tailwind.config = {
   function isLocAdvanceDesc(text) { return LOC_ADV_RE.test(String(text || '')); }
   function looksLikeTransfer(text) {
     if (isLocAdvanceDesc(text)) return true;
+    // "SECURITY SRV FCU P2P MOBILE": your own credit union moving money over
+    if (/\b(fcu|credit union|ssfcu|security s(?:e)?rv(?:ice)?)\b.*\bp2p\b/i.test(text)) return true;
     if (/\bpayroll|direct dep|paycheck\b/i.test(text)) return false;   // that is real income
     // "Credit-Travel Reward", "Credit-Cash Back Reward", "Credit-Points Redemption"
     if (/\bcredit\b/i.test(text) && /\breward|redemption|redeem|cash ?back|points|miles|streaming|statement|benefit|offer|monthly|annual|subscription\b/i.test(text)) return true;
@@ -1374,9 +1376,11 @@ tailwind.config = {
       desc: d,
       acct: resolveAcct(o.acct || guessAccount(String(desc))),
       xfer: o.xfer != null ? !!o.xfer : looksLikeTransfer(String(desc)),
-      cat: o.cat || guessCategory(desc, isIn),
+      cat: (() => { const c = o.cat || guessCategory(desc, isIn); const x = o.xfer != null ? !!o.xfer : looksLikeTransfer(String(desc));
+        return x && (c === 'Income' || c === 'Uncategorized') ? 'Transfer' : c; })(),
       amount: Math.abs(amount),
       dir: (o.xfer != null ? o.xfer : looksLikeTransfer(String(desc))) ? 'xfer' : (isIn ? 'in' : 'out'),
+      xferIn: isIn && (o.xfer != null ? !!o.xfer : looksLikeTransfer(String(desc))),
       guessedDate: !!o.guessedDate,
       guessedDir: !!o.guessedDir,
       guessedCat: !o.cat && guessCategory(desc, isIn) === 'Uncategorized',
@@ -1384,9 +1388,36 @@ tailwind.config = {
     };
   }
 
+  /* Bank apps wrap a long name onto a second line ("SECURITY SRV FCU P2P" /
+     "MOBILE"), and the screenshot puts the running balance beside that second
+     line. A line that is only a channel word belongs to the name above it;
+     its amount, if any, stays on its own line where it reads as the balance. */
+  const WRAP_WORD = '(?:mobile|online|web|internet|banking|p2p|ach|ppd|ccd)';
+  const WRAP_LINE = new RegExp('^' + WRAP_WORD + '(?:\\s+' + WRAP_WORD + ')*$', 'i');
+  function joinWrappedNames(text) {
+    const lines = String(text || '').split(/\r?\n/);
+    const AMT = /^(.*?)\s*(-?\s?[$\u20ac\u00a3]?\s?\d[\d,]*\.\d{2})\s*$/;
+    const split = l => { const m = l.trim().match(AMT); return m ? { txt: m[1].trim(), amt: m[2] } : { txt: l.trim(), amt: '' }; };
+    for (let i = 1; i < lines.length; i++) {
+      const cur = split(lines[i]);
+      if (!cur.txt || !WRAP_LINE.test(cur.txt)) continue;
+      // the name above, stepping over at most one bare amount line
+      let j = i - 1;
+      if (j >= 0 && !split(lines[j]).txt && split(lines[j]).amt) j--;
+      if (j < 0) continue;
+      const prev = split(lines[j]);
+      if (!/[a-z]{2,}/i.test(prev.txt) || /^(pending|posted|today|yesterday)$/i.test(prev.txt) || /\d{1,2}\/\d{1,2}/.test(prev.txt) && prev.txt.length < 11) continue;
+      // name on its own line, then amount, then balance: the shape the balance reader knows
+      lines[j] = prev.txt + ' ' + cur.txt + (prev.amt ? '\n' + prev.amt : '');
+      lines[i] = cur.amt;
+    }
+    return lines.filter((l, i) => l.trim() !== '' || i === 0).join('\n');
+  }
+
   function parseAnything(text) {
     // "TO ACCOUNT 0106487793": keep the last 4 digits so the transfer can be matched to your own account.
     text = String(text || '').replace(/\b(to|from)(\s+(?:acct|account|savings|checking))\s*#?\s*\d*(\d{4})\b(?!\.\d)/gi, '$1$2 \u2022\u2022$3');
+    text = joinWrappedNames(text);
     const rows = [], notes = [];
     const raw = String(text || '').replace(/\u00a0/g, ' ').trim();
     if (!raw) return { rows, notes: ['Nothing to read — paste something first.'] };
@@ -1719,8 +1750,20 @@ tailwind.config = {
         const G = withAmts.map(q => ({ at: q.amts[0], amt: val(q.amts[0]), bal: val(q.amts[1]) }));
         withAmts.forEach(q => skipLine.add(q.amts[1]));
         const near = (a, b) => Math.abs(a - b) < 0.005;
+        // With no neighbour to compare, the balance Truly already has for a bank says which way it went.
+        const banks = Object.keys(accounts).filter(n => acctIcon(n) === 'bank' || acctIcon(n) === 'vault');
+        const fromKnown = q => {
+          for (const n of banks) {
+            const cur = balanceDetail(n).now;
+            if (!accounts[n].asOf) continue;
+            if (near(q.bal - cur, q.amt)) return 'in';
+            if (near(cur - q.bal, q.amt)) return 'out';
+          }
+          return null;
+        };
         G.forEach((q, k) => {
           const older = G[k + 1], newer = G[k - 1];
+          if (!older && !newer) { const d = fromKnown(q);  if (d) forcedDir.set(q.at, d); return; }
           if (older && near(q.bal - older.bal, q.amt)) forcedDir.set(q.at, 'in');        // newest first
           else if (older && near(older.bal - q.bal, q.amt)) forcedDir.set(q.at, 'out');
           else if (newer && near(q.bal - newer.bal, q.amt)) forcedDir.set(q.at, 'in');   // oldest first
@@ -2127,7 +2170,7 @@ tailwind.config = {
         <div class="flex gap-2">
           <input class="cell num text-[13px]" type="date" value="${esc(r.date)}" data-i="${i}" data-f="date" aria-label="Date">
           <div class="flex gap-1.5 shrink-0">
-            <button class="w-14 rounded-[.6rem] border text-[12px] font-semibold ${r.dir === 'in' ? 'border-income/40 bg-income/10 text-income' : r.dir === 'xfer' ? 'border-white/25 bg-white/10 text-ink' : 'border-line bg-page text-muted'}" data-i="${i}" data-f="dir">${r.dir === 'in' ? 'In' : r.dir === 'xfer' ? (r.cat === 'LOC Advance' ? 'Advance' : 'Payment') : 'Out'}</button>
+            <button class="w-14 rounded-[.6rem] border text-[12px] font-semibold ${r.dir === 'in' ? 'border-income/40 bg-income/10 text-income' : r.dir === 'xfer' ? 'border-white/25 bg-white/10 text-ink' : 'border-line bg-page text-muted'}" data-i="${i}" data-f="dir">${r.dir === 'in' ? 'In' : r.dir === 'xfer' ? (r.cat === 'LOC Advance' ? 'Advance' : r.xferIn ? 'Xfer in' : 'Payment') : 'Out'}</button>
             <input class="cell num text-[14px] font-semibold w-24 text-right" type="number" inputmode="decimal" step="0.01" value="${r.amount}" data-i="${i}" data-f="amount" aria-label="Amount">
           </div>
         </div>
@@ -5233,7 +5276,12 @@ tailwind.config = {
     if (!btn) return;
     const i = +btn.dataset.i;
     if (btn.dataset.f === 'dir') {
-      draft[i].dir = draft[i].dir === 'out' ? 'in' : draft[i].dir === 'in' ? 'xfer' : 'out';
+      // Out → In → Payment / transfer out → Transfer in → Out
+      const r0 = draft[i];
+      if (r0.dir === 'out') { r0.dir = 'in'; r0.xferIn = false; }
+      else if (r0.dir === 'in') { r0.dir = 'xfer'; r0.xferIn = false; }
+      else if (!r0.xferIn && r0.cat !== 'LOC Advance') { r0.xferIn = true; }
+      else { r0.dir = 'out'; r0.xferIn = false; }
       draft[i].guessedDir = false;                 // you have checked it
       if (draft[i].dir === 'in' && draft[i].cat === 'Uncategorized') draft[i].cat = 'Income';
       if (draft[i].dir === 'xfer' && (draft[i].cat === 'Uncategorized' || draft[i].cat === 'Income')) draft[i].cat = 'Transfer';
@@ -5265,7 +5313,7 @@ tailwind.config = {
       }
       let acct = resolveAcct(titleCaseAcct(r.acct));
       if (acct === 'Unassigned' && settings.primaryAcct) acct = settings.primaryAcct;
-      const out = { id: r.id, at: Date.now(), date: r.date, desc: (r.desc || '').trim() || 'Untitled', cat: cat, acct: acct, xfer: r.dir === 'xfer', amount: r.dir === 'in' ? -r.amount : r.amount };
+      const out = { id: r.id, at: Date.now(), date: r.date, desc: (r.desc || '').trim() || 'Untitled', cat: cat, acct: acct, xfer: r.dir === 'xfer', amount: (r.dir === 'in' || (r.dir === 'xfer' && r.xferIn)) ? -r.amount : r.amount };
       if (r.dir === 'xfer' && r.payTo && r.payTo !== 'none') out.payTo = r.payTo;
       const own = ownAccountTransfer(out);
       if (own) { out.xfer = true; out.cat = 'Transfer'; out.payTo = own.to; out.amount = own.out ? Math.abs(out.amount) : -Math.abs(out.amount); }
@@ -5588,7 +5636,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-24 · 131';
+  const BUILD = '2026-11-25 · 132';
 
   /* =============================================================
      KEEPING THE DATA
