@@ -1380,7 +1380,9 @@ tailwind.config = {
         return x && (c === 'Income' || c === 'Uncategorized') ? 'Transfer' : c; })(),
       amount: Math.abs(amount),
       dir: (o.xfer != null ? o.xfer : looksLikeTransfer(String(desc))) ? 'xfer' : (isIn ? 'in' : 'out'),
-      xferIn: isIn && (o.xfer != null ? !!o.xfer : looksLikeTransfer(String(desc))),
+      // Direction unknown and it is your credit union's P2P: that money is coming in
+      xferIn: (isIn || (!!o.guessedDir && /\b(fcu|credit union|ssfcu|security s(?:e)?rv(?:ice)?)\b.*\bp2p\b/i.test(String(desc)))) &&
+        (o.xfer != null ? !!o.xfer : looksLikeTransfer(String(desc))),
       guessedDate: !!o.guessedDate,
       guessedDir: !!o.guessedDir,
       guessedCat: !o.cat && guessCategory(desc, isIn) === 'Uncategorized',
@@ -1395,7 +1397,15 @@ tailwind.config = {
   const WRAP_WORD = '(?:mobile|online|web|internet|banking|p2p|ach|ppd|ccd)';
   const WRAP_LINE = new RegExp('^' + WRAP_WORD + '(?:\\s+' + WRAP_WORD + ')*$', 'i');
   function joinWrappedNames(text) {
-    const lines = String(text || '').split(/\r?\n/);
+    text = String(text || '')
+      // Copied text can split one number in two: "$7,07 1.22" is $7,071.22
+      .replace(/([$\u20ac\u00a3]\s?\d{1,3}(?:,\d{3})*),(\d{1,2})\s+(\d{1,2})\.(\d{2})\b/g,
+        (m, a, b, c, d) => (b + c).length === 3 ? a + ',' + b + c + '.' + d : m)
+      // "NAME $4,050.00 $7,071.22" on one line: the amount, then the running balance
+      .replace(/^(.*[a-z].*?)\s+(-?\s?[$\u20ac\u00a3]\s?\d[\d,]*\.\d{2})\s+(-?\s?[$\u20ac\u00a3]\s?\d[\d,]*\.\d{2})\s*$/gim, '$1\n$2\n$3')
+      // "PENDING NAME …": the status word is not part of the name
+      .replace(/^\s*(pending|posted)\s+(?=\S)/gim, '$1\n');
+    const lines = text.split(/\r?\n/);
     const AMT = /^(.*?)\s*(-?\s?[$\u20ac\u00a3]?\s?\d[\d,]*\.\d{2})\s*$/;
     const split = l => { const m = l.trim().match(AMT); return m ? { txt: m[1].trim(), amt: m[2] } : { txt: l.trim(), amt: '' }; };
     for (let i = 1; i < lines.length; i++) {
@@ -5636,7 +5646,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-25 · 132';
+  const BUILD = '2026-11-25 · 133';
 
   /* =============================================================
      KEEPING THE DATA
