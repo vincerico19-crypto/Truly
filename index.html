@@ -1368,6 +1368,9 @@ tailwind.config = {
 
   function makeRow(dateISO, desc, amount, opts) {
     const o = opts || {};
+    // Direction unknown and it reads like income ("ACH PAYMTS", payroll): money in
+    if (o.guessedDir && amount > 0 && !o.xfer && !looksLikeTransfer(String(desc)) &&
+        /\b(ach\s+(?:paymts?|pmts?|pymts?|pymnts?|payments?|credits?)|payroll|dir(?:ect)?\s*dep(?:osit)?|direct\s+pay)\b/i.test(String(desc))) amount = -amount;
     const isIn = amount < 0;
     const d = prettyDesc(desc);
     return {
@@ -1394,8 +1397,14 @@ tailwind.config = {
      "MOBILE"), and the screenshot puts the running balance beside that second
      line. A line that is only a channel word belongs to the name above it;
      its amount, if any, stays on its own line where it reads as the balance. */
-  const WRAP_WORD = '(?:mobile|online|web|internet|banking|p2p|ach|ppd|ccd)';
-  const WRAP_LINE = new RegExp('^' + WRAP_WORD + '(?:\\s+' + WRAP_WORD + ')*$', 'i');
+  const WRAP_WORD = '(?:mobile|online|web|tel|internet|banking|p2p|ach|ppd|ccd|pos|paymts?|pmts?|pymts?|pymnts?|payments?|deposits?|dep|dir|direct|transfers?|xfer|trnsfr|trf|credits?|debits?|purchase|withdrawal|wd|payroll|inc|llc|co|corp|svcs?|services|ltd)';
+  // A bank cut a long name at the screen edge: an all-caps line of 16+ characters,
+  // then one or two short all-caps words. "THE CHRISTIAN SC ACH" / "PAYMTS"
+  const looksCutOff = (prev, cur) => prev.length >= 16 && prev === prev.toUpperCase() && /[A-Z]{2}/.test(prev) &&
+    /^[A-Z][A-Z&.'\-]*(?:\s[A-Z][A-Z&.'\-]*)?$/.test(cur) && cur.length <= 14 && !/^(pending|posted|today|yesterday)$/i.test(cur);
+  const WRAP_LINE = new RegExp('^' + WRAP_WORD + '(?:\\s+' + WRAP_WORD + ')?$', 'i');
+  // Words that never stand alone as a transaction: abbreviations and channels only.
+  const TAIL_LINE = /^(?:mobile|online|web|tel|internet|banking|p2p|ach|ppd|ccd|pos|paymts?|pmts?|pymts?|pymnts?|dep|trnsfr|trf|inc|llc|co|corp|svcs?|ltd)$/i;
   function joinWrappedNames(text) {
     text = String(text || '')
       // Copied text can split one number in two: "$7,07 1.22" is $7,071.22
@@ -1406,16 +1415,25 @@ tailwind.config = {
       // "PENDING NAME …": the status word is not part of the name
       .replace(/^\s*(pending|posted)\s+(?=\S)/gim, '$1\n');
     const lines = text.split(/\r?\n/);
+    const AMT0 = /^(.*?)\s*(-?\s?[$\u20ac\u00a3]?\s?\d[\d,]*\.\d{2})\s*$/;
+    // Only trust the cut-off rule when the screenshot carries running balances
+    // (more amounts than names), so two short store names are never glued together.
+    const nAmts = lines.filter(l => AMT0.test(l.trim())).length;
+    const nText = lines.filter(l => { const m = l.trim().match(AMT0); const t = m ? m[1].trim() : l.trim(); return /[a-z]{2,}/i.test(t) && !/^(pending|posted|today|yesterday)$/i.test(t); }).length;
+    const hasBalances = nAmts > nText;
     const AMT = /^(.*?)\s*(-?\s?[$\u20ac\u00a3]?\s?\d[\d,]*\.\d{2})\s*$/;
     const split = l => { const m = l.trim().match(AMT); return m ? { txt: m[1].trim(), amt: m[2] } : { txt: l.trim(), amt: '' }; };
     for (let i = 1; i < lines.length; i++) {
       const cur = split(lines[i]);
-      if (!cur.txt || !WRAP_LINE.test(cur.txt)) continue;
+      if (!cur.txt) continue;
       // the name above, stepping over at most one bare amount line
       let j = i - 1;
-      if (j >= 0 && !split(lines[j]).txt && split(lines[j]).amt) j--;
+      // Step back over the amount only when every row has a balance beside it;
+      // otherwise "PMT / -$250.00 / PAYROLL" is two transactions, not one name.
+      if (j >= 0 && !split(lines[j]).txt && split(lines[j]).amt) { if (!hasBalances && !TAIL_LINE.test(cur.txt)) continue; j--; }
       if (j < 0) continue;
       const prev = split(lines[j]);
+      if (!WRAP_LINE.test(cur.txt) && !(hasBalances && looksCutOff(prev.txt, cur.txt))) continue;
       if (!/[a-z]{2,}/i.test(prev.txt) || /^(pending|posted|today|yesterday)$/i.test(prev.txt) || /\d{1,2}\/\d{1,2}/.test(prev.txt) && prev.txt.length < 11) continue;
       // name on its own line, then amount, then balance: the shape the balance reader knows
       lines[j] = prev.txt + ' ' + cur.txt + (prev.amt ? '\n' + prev.amt : '');
@@ -5646,7 +5664,7 @@ tailwind.config = {
     if (row) openEdit(row.getAttribute('data-edit'));
   });
 
-  const BUILD = '2026-11-25 · 133';
+  const BUILD = '2026-11-27 · 134';
 
   /* =============================================================
      KEEPING THE DATA
